@@ -1,0 +1,40 @@
+<h6 class="sidebar-title">Main</h6>
+<a class="sidebar-link" href="/"><i class="fas fa-fire fa-fw"></i>&ensp;Dank Memes</a>
+<a class="sidebar-link" {% if user.is_authenticated %}href="{% url 'feed' %}"{% else %}href="javascript:void(0);" onclick="$('#loginModal').modal('show')"{% endif %}><i class="fas fa-carrot fa-fw"></i>&ensp;Feed</a>
+<a class="sidebar-link" href="/all"><i class="fas fa-bars fa-fw"></i>&ensp;Browse all</a>
+{% if user.is_authenticated %}
+    {% with pages=user.page_set.all %}
+        {% if pages %}
+            <hr style="background-color: #505050;">
+            <h6 class="sidebar-title">Pages</h6>
+            {% for page in pages %}
+                <a class="sidebar-link" href="{% url 'page' page.name %}"><i class="fas {% if page.private %}fa-lock{% else %}fa-star{% endif %} fa-fw"></i>&ensp;{{ page.get_display_name }}</a>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    {% with subs=user.subscriptions.all %}
+        {% if subs %}
+            <hr style="background-color: #505050;">
+            <h6 class="sidebar-title">Subscriptions</h6>
+            {% for sub in subs %}
+                <a class="sidebar-link" href="{% url 'page' sub.name %}"><i class="fas {% if sub.private %}fa-lock{% else %}fa-star{% endif %} fa-fw"></i>&ensp;{{ sub.get_display_name }}</a>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+{% endif %}
+<hr style="background-color: #505050;">
+<h6 class="sidebar-title">Categories</h6>
+<a class="sidebar-link" href="/browse/movies"><i class="fas fa-film fa-fw"></i>&ensp;Movies</a>
+<a class="sidebar-link" href="/browse/tv-shows"><i class="fas fa-tv fa-fw"></i>&ensp;TV Shows</a>
+<a class="sidebar-link" href="/browse/gaming"><i class="fas fa-gamepad fa-fw"></i>&ensp;Gaming</a>
+<a class="sidebar-link" href="/browse/animals"><i class="fas fa-paw fa-fw"></i>&ensp;Animals</a>
+<a class="sidebar-link" href="/browse/internet"><i class="fas fa-globe-americas fa-fw"></i>&ensp;Internet</a>
+<a class="sidebar-link" href="/browse/school"><i class="fas fa-school fa-fw"></i>&ensp;School</a>
+<a class="sidebar-link" href="/browse/anime"><i class="far fa-grin-beam fa-fw"></i>&ensp;Anime</a>
+<a class="sidebar-link" href="/browse/celebrities"><i class="far fa-grin-stars fa-fw"></i>&ensp;Celebrities</a>
+<a class="sidebar-link" href="/browse/sports"><i class="fas fa-running fa-fw"></i>&ensp;Sports</a>
+<a class="sidebar-link" href="/browse/football"><i class="fas fa-futbol fa-fw"></i>&ensp;Football</a>
+<a class="sidebar-link" href="/browse/nba"><i class="fas fa-basketball-ball fa-fw"></i>&ensp;NBA</a>
+<a class="sidebar-link" href="/browse/nfl"><i class="fas fa-football-ball fa-fw"></i>&ensp;NFL</a>
+<a class="sidebar-link" href="/browse/news"><i class="far fa-newspaper fa-fw"></i>&ensp;News</a>
+<a class="sidebar-link" href="/browse/university"><i class="fas fa-graduation-cap fa-fw"></i>&ensp;University</a>

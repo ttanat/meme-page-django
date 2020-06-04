@@ -1,0 +1,114 @@
+{% extends 'memes/base.html' %}
+
+{% block title %}{% if path == "settings" %}{{ user.username }} - Settings{% else %}{{ user_displayed.username }} - Meme Page User{% endif %}{% endblock %}
+
+{% block main %}
+    <div class="container-fluid" style="padding-left: 5%;padding-right: 5%;">
+        <div class="row justify-content-center">
+            <div class="col-md-4 col-xl-3" id="profile-col">
+
+                {# Profile picture and username #}
+                <div class="container-fluid">
+                    <div class="row">
+                        <div id="profile-pic-container">
+                            {% if is_profile_page and user.image %}
+                                <img class="rounded-circle" id="profile-pic" src="{{ user.image.url }}" height="55" width="55">
+                            {% elif not is_profile_page and user_displayed.image %}
+                                <img class="rounded-circle" id="profile-pic" src="{{ user_displayed.image.url }}" height="65" width="65">
+                            {% else %}
+                                <i class="fas fa-user-circle" style="font-size: 60px;margin: 5px;"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h5 id="profile-username" class="m-1">{{ user_displayed.username }}</h5>
+                            {% if is_profile_page and path != "settings" %}
+                                <small class="text-muted pointer" id="editProfilePic" onclick="this.nextSibling.click()">&nbsp;Edit profile picture</small>
+                                <input type="file" name="profilePic" id="updateProfilePic" accept="image/jpeg, image/png" class="d-none" onchange="update_profile_pic()">
+                            {% else %}
+                                <span id="follow-btn"><follow-button :following="{% if is_following %}true{% else %}false{% endif %}" :is-profile="true"></follow-button></span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {# User bio #}
+                <div class="mt-2">
+                    {% if is_profile_page and path == "profile" %}
+                        <div id="vue-bio"><bio-desc bio-or-desc="{{ user.bio }}" add-text="bio"></bio-desc></div>
+                    {% else %}
+                        <span style="font-size: 14px;white-space: pre-wrap;">{{ user_displayed.bio }}</span>
+                    {% endif %}
+                </div>
+                <hr class="mb-2" style="background-color: grey;">
+
+                {# User stats #}
+                {% if path != "settings" %}<div id="pstats"><profile-stats></profile-stats></div>{% endif %}
+
+                <div class="mt-4 mb-5">
+                    <h5>Profile</h5>
+                        {% if is_profile_page %}
+                            <a class="sidebar-link" href="{% if path == 'profile' %}javascript:void(0);{% else %}/profile{% endif %}" data-profile-page="Uploads"><i class="fas fa-box-open"></i>&ensp;Your memes</a>
+                            <a class="sidebar-link" href="{% if path == 'likes' %}javascript:void(0);{% else %}/profile/likes{% endif %}" data-profile-page="Likes"><i class="fas fa-thumbs-up"></i>&ensp;Likes</a>
+                            <a class="sidebar-link" href="{% if path == 'comments' %}javascript:void(0);{% else %}/profile/comments{% endif %}" data-profile-page="Comments"><i class="fas fa-comment"></i>&ensp;Comments</a>
+                            <a class="sidebar-link" href="{% if path == 'comments' %}javascript:void(0);{% else %}/profile/comments{% endif %}" data-profile-page="Comments"><i class="fas fa-comment"></i>&ensp;Comments</a>
+                            <a class="sidebar-link" href="{% if path == 'comments' %}javascript:void(0);{% else %}/profile/comments{% endif %}" data-profile-page="Comments"><i class="fas fa-comment"></i>&ensp;Comments</a>
+                        {% else %}
+                            <a class="sidebar-link" href="javascript:void(0);" data-profile-page="Uploads"><i class="fas fa-box-open"></i>&ensp;Memes</a>
+                        {% endif %}
+                    <br>
+
+                    {% if is_profile_page %}
+                        {% with pages=user.page_set.all %}
+                            {% if pages|length > 2 %}
+                                <script type="text/javascript" id="zxcvbn">document.querySelectorAll("#newMemePage, [data-target='#newMemePage'], #zxcvbn").forEach(n=>n.remove())</script>
+                            {% endif %}
+                            {% if pages %}
+                                <h5>Meme Pages</h5>
+                                {% for page in pages %}
+                                    <a class="sidebar-link" href="/page/{{ page.name }}"><i class="fas {% if page.private %}fa-lock{% else %}fa-star{% endif %}"></i>&ensp;{{ page.get_display_name }}</a>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        {% with pages=user_displayed.page_set.all %}
+                            {% if pages %}
+                                <h5>Meme Pages</h5>
+                                {% for page in pages %}
+                                    <a class="sidebar-link" href="/page/{{ page.name }}"><i class="fas {% if page.private %}fa-lock{% else %}fa-star{% endif %}"></i>&ensp;{{ page.get_display_name }}</a>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-8 col-xl-9">
+                <h5 {% if path != "comments" %}style="padding-left: 5px;"{% endif %} id="profile-page">{# Page title here #}</h5>
+                {% if path == "user" or path == "profile" or path == "likes" %}
+                    <div class="mb-4" id="tiles"><tile-items v-for="tile in tiles" :key="tile.uuid" :tile="tile"></tile-items><div v-if="no_content && !tiles.length" class="profile-empty" onclick="$('#uploadModal').modal('show')">{% if path == "likes" %}No likes yet :({% else %}<i class="fas fa-plus"></i> Upload your first meme!{% endif %}</div></div>
+                {% elif path == "comments" %}
+                    <div class="container-fluid" id="profile-comments"><my-comments v-for="comment in comments" :key="comment.uuid" :comment="comment"></my-comments><div v-if="loading"><i class="fas fa-circle-notch fa-spin"></i></div><div v-if="no_content && !comments.length" class="profile-empty">No comments yet</div></div>
+                {% elif path == "settings" %}
+                    <div id="psettings"><profile-settings {% if user.image %}image-url="{{ user.image.url }}"{% endif %} :filter-nsfw="{% if user.nsfw_filter %}true{% else %}false{% endif %}" {% if user.email %}user-email="{{ user.email }}"{% endif %} ></profile-settings></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    {% load static %}
+    {% if path == "settings" %}
+        <script type="text/javascript" src="{% static 'memes/settings.js' %}"></script>
+    {% else %}
+        {% if not is_profile_page %}
+            <script type="text/javascript">
+                const USER_PAGE = "{{ user_displayed.username }}";
+                if (window.location.pathname.split("/")[2] !== USER_PAGE) history.pushState(null, document.title, USER_PAGE);
+            </script>
+        {% endif %}
+        <script type="text/javascript" src="{% static 'memes/index.js' %}"></script>
+        <script type="text/javascript" src="{% static 'memes/profile.js' %}"></script>
+        <script type="text/javascript" src="{% static 'memes/page_and_profile.js' %}"></script>
+    {% endif %}
+{% endblock %}

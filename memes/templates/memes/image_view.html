@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>meme.page</title>
+        {% load static %}
+        <link rel="icon" href="{% static 'memes/earth.png' %}" type="image/svg">
+        <style type="text/css">
+            body {
+                color: lightgrey;
+                font-family: arial, sans-serif;
+            }
+            #back {
+                text-decoration: none;
+                color: unset;
+                margin-left: 5px;
+            }
+            #left {
+                width: 75%;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                position: fixed;
+                height: 100%;
+                overflow-y: scroll;
+                background-color: #252525;
+            }
+            #meme {
+                max-width: 500px;
+                width: auto;
+                height: auto;
+                top: 0;
+                left: 0;
+                right: 0;
+                margin: auto;
+            }
+            #right {
+                width: 25%;
+                right: 0;
+                top: 0;
+                position: fixed;
+                height: 100%;
+                background-color: #191919;
+            }
+            #ad, #ad2 {
+                width: 90%;
+                border-radius: .2rem;
+                left: 0;
+                right: 0;
+                margin: auto;
+                position: absolute;
+                cursor: pointer;
+            }
+            #ad {
+                bottom: 10rem;
+            }
+            #ad2 {
+                bottom: 2rem;
+            }
+            #adm, #adm2 {
+                width: 95%;
+                margin-top: 5px;
+                border-radius: .2rem;
+            }
+            @media (max-width: 767.98px) {
+                #back, #right {
+                    display: none;
+                }
+                #left, #meme {
+                    width: 100%;
+                    text-align: center;
+                }
+            }
+            @media (min-width: 767.98px) {
+                #meme {
+                    position: absolute;
+                    bottom: 0;
+                }
+                #adm, #adm2 {
+                    display: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="left">
+            <a href="/" id="back">Back to meme page</a>
+            {% if isVid %}<video src="{{ url }}" controls id="meme"></video>{% else %}<img src="{{ url }}" id="meme">{% endif %}
+            <img src="{% static 'memes/banner_light.png' %}" id="adm">
+            <img src="{% static 'memes/banner_dark.png' %}" id="adm2">
+        </div>
+        <div id="right">
+            <h3 style="margin: 1rem;">Meme Page</h3>
+            <span style="margin: 1rem;">Drag and drop item to save</span>
+            <img src="{% static 'memes/banner_light.png' %}" id="ad">
+            <img src="{% static 'memes/banner_dark.png' %}" id="ad2">
+        </div>
+    </body>
+</html>

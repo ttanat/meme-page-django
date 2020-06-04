@@ -1,0 +1,14 @@
+# Logs
+*.log
+
+# Database
+db.sqlite3
+
+# Media folder
+media/
+
+# __pycache__ folders
+__pycache__/
+
+# macOS
+.DS_Store

@@ -1,0 +1,91 @@
+{% extends 'memes/base.html' %}
+{% load static %}
+
+{% block title %}{% if request.path == "/search" %}{{ request.GET.q }} - Meme Page Search{% else %}Meme Page{% endif %}{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+
+            <div id="left" class="col-lg-2 col-xl-2">
+                {% include 'memes/left.html' %}
+            </div>
+
+            <div id="mid" class="col-sm-8 col-lg-7 col-xl-6">
+                {% if list_view %}
+                    <div id="search-list"><search-items v-for="result, i in results" :key="i" :result="result" :search-user="query[0]==='@'"></search-items><div v-show="loading" class="index-loading"><i class="fas fa-circle-notch fa-spin"></i></div></div>
+                {% else %}
+                    <div id="memes-container"><meme-items v-for="meme in mdata" :key="meme.uuid" :meme="meme" :muted="muted" @new-meme-event="observeNewMeme" @toggle-sound-event="toggleSound"></meme-items><div v-show="loading" class="index-loading"><i class="fas fa-circle-notch fa-spin"></i></div></div>
+                {% endif %}
+            </div>
+
+            <div id="right" class="col-sm-4 col-lg-3 col-xl-3">
+                <div style="position: sticky;position: -webkit-sticky;top: 4rem;">
+                    <img class="ad" src="{% static 'memes/got_ad.png' %}" alt="Advertisement">
+                    <img class="ad" src="{% static 'memes/ad_two.png' %}" alt="Advertisement">
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <input id="copy_text" style="display: none;">
+{% endblock %}
+
+{% block script %}
+    <script type="text/javascript" src="{% static 'memes/index.js' %}"></script>
+
+    <script type="text/javascript">
+        if (window.location.pathname === "/search") {
+            document.querySelector("#page").textContent = "Search";
+        } else {
+            const sidebar_links = document.querySelectorAll(".sidebar-link");
+            for (let i = 0, n = sidebar_links.length, pn = window.location.pathname; i < n; i++) {
+                if (sidebar_links[i].pathname === pn) {
+                    const sl = sidebar_links[i];
+                    document.querySelector("#page").textContent = sl.textContent.trim();
+                    sl.style.backgroundColor = "#333333";
+                    sl.style.color = "green";
+                    break;
+                }
+            }
+        }
+
+        resizeMid();
+        window.onresize = () => {
+            resizeMid();
+        }
+    </script>
+
+    <style type="text/css">
+        .item {
+            border: 1px solid #333333;
+            border-radius: 7px;
+        }
+        .thumbs {
+            margin-left: 5px;
+        }
+        /* Mobile view */
+        @media (max-width: 575.98px) {
+            #mid {
+                padding: 0 !important;
+            }
+            .item {
+                border: none;
+                border-radius: 0;
+            }
+            .container-body, .container-body video {
+                max-height: unset;
+            }
+            .content {
+                object-fit: unset;
+            }
+            html::-webkit-scrollbar {
+                display: none;
+            }
+            html {
+                scrollbar-width: none;
+            }
+        }
+    </style>
+{% endblock %}

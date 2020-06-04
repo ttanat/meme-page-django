@@ -1,0 +1,52 @@
+{# Center navbar items #}
+<div class="navbar-nav collapse navbar-collapse justify-content-center">
+    <a class="nav-item nav-link mr-3" id="page" style="cursor: pointer;"></a>
+    <div id="search-form"></div>
+</div>
+
+
+{# Right navbar items #}
+<div class="navbar-nav ml-auto mr-3">
+    {% if user.is_authenticated %}
+        <a class="nav-item nav-link text-light mr-3" href="/"><i class="fas fa-home"></i> Home</a>
+
+        {% if is_profile_page and path != "settings" %}
+            <a type="button" class="nav-item nav-link text-light mr-3" data-toggle="modal" data-target="#newMemePage">
+                <i class="fas fa-plus"></i> Meme Page
+            </a>
+        {% endif %}
+
+        {# Upload modal button #}
+        <a type="button" class="nav-item nav-link text-light mr-3" data-toggle="modal" data-target="#uploadModal">
+            <i class="fas fa-file-upload"></i> Upload
+        </a>
+
+        <div id="notif-dropdown"><notification-dropdown></notification-dropdown></div>
+
+        <div class="dropdown">
+            <a type="button" class="nav-item nav-link text-light mr-2" data-toggle="dropdown">
+                <span id="profile-image">{% if user.image %}<img class="rounded-circle" src="{{ user.image.url }}" height="21" width="21">{% else %}<i class="fas fa-user-circle"></i>{% endif %}</span>&nbsp;{{ user.username }}&nbsp;<i class="fas fa-caret-down"></i>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right" style="width: 190px;background-color: #252525;color: lightgrey;">
+                <h5 class="dropdown-header m-0" style="overflow-x: hidden;text-overflow: ellipsis;">{{ user.username }}</h5>
+                {% if not is_profile_page or path == "settings" %}
+                    <a class="dropdown-item user-dropdown" href="/profile"><i class="fas fa-user"></i> Profile</a>
+                {% endif %}
+                <a class="dropdown-item user-dropdown" href="javascript:night()"><i id="moon-icon" class="far fa-moon"></i> Night</a>
+                {% if path != "settings" %}
+                    <a class="dropdown-item user-dropdown" href="/settings"><i class="fas fa-cog"></i> Settings</a>
+                {% endif %}
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item user-dropdown" href="/logout"><i class='fas fa-sign-out-alt'></i> Logout</a>
+            </div>
+        </div>
+    {% else %}
+        <button class="btn btn-sm mr-3" style="width: 100px;visibility: hidden;"></button>
+
+        {# Login modal button #}
+        <button type="button" class="btn btn-sm btn-outline-success mr-3" data-toggle="modal" data-target="#loginModal" style="width: 80px;">Log in</button>
+
+        {# Sign up modal button #}
+        <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#signUpModal" style="width: 80px;">Sign up</button>
+    {% endif %}
+</div>

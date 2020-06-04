@@ -1,0 +1,81 @@
+{% spaceless %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{% block title %}{% endblock %}</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+
+        {% load static %}
+        <link rel="icon" href="{% static 'memes/earth.svg' %}" type="image/svg">
+        <script type="text/javascript">const AUTH={% if user.is_authenticated %}true{% else %}false{% endif %};const USERNAME="{{ user.username }}";</script>
+        {% if user.is_authenticated %}
+            <script type="application/json" id="pages">
+                [
+                    {% with pages=user.page_set.all %}
+                        {% for page in pages %}
+                            {
+                                "name": "{{ page.name }}",
+                                "dname": "{{ page.get_display_name }}",
+                                "private": {% if page.private %}true{% else %}false{% endif %}
+                            }{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                ]
+            </script>
+            <script type="application/json" id="subscriptions">
+                [
+                    {% with subs=user.subscriptions.all %}
+                        {% for sub in subs %}
+                            {
+                                "name": "{{ sub.name }}",
+                                "dname": "{{ sub.get_display_name }}",
+                                "private": {% if sub.private %}true{% else %}false{% endif %}
+                            }{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                ]
+            </script>
+        {% endif %}
+        <link rel="stylesheet" href="{% static 'memes/styles.css' %}">
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css">
+    </head>
+
+    <body>
+        <nav class="navbar sticky-top navbar-expand-xl navbar-dark justify-content-between">
+            <a class="navbar-brand ml-xl-4" href="/">Meme Page</a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+                {% include 'memes/nav_items.html' %}
+            </div>
+        </nav>
+
+        {% if user.is_authenticated %}
+            {% if is_profile_page %}<div id="new-page-form"><new-page-modal></new-page-modal></div>{% endif %}
+            <div id="upload-form"><upload-modal></upload-modal></div>
+        {% else %}
+            <div id="login-form"><login-modal></login-modal></div>
+            <div id="register-form"><register-modal></register-modal></div>
+            <script type="text/javascript" src="{% static 'memes/auth.js' %}"></script>
+        {% endif %}
+
+        <main>
+            {% block main %}{% endblock %}
+        </main>
+
+        <div class="alert alert-success d-none" role="alert" id="success-alert"></div>
+        <div id="danger-alert"><danger-alert :showing="showing" :message="message" @hide="hide"></danger-alert></div>
+
+        {% block script %}{% endblock %}
+    </body>
+</html>
+{% endspaceless %}

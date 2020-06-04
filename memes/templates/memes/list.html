@@ -1,0 +1,91 @@
+{% extends 'memes/base.html' %}
+
+{% block title %}{{ request.GET.q }} - Meme Page Search{% endblock %}
+
+{% block main %}
+    <div class="container-fluid" style="/*padding-left: 3%;padding-right: 3%;">
+        <div class="row justify-content-center">
+            <div class="col-lg-2" id="left">
+                {% include 'memes/left.html' %}
+            </div>
+            <div class="col-lg-6">
+                <ul class="list-unstyled">
+                    {% for result in results %}
+                        <li class="media{% if not forloop.first and not forloop.last %} my-4{% endif %}">
+                            <a class="mr-3" href="/user/{{ result.username }}">
+                                {% if result.image %}
+                                    <img class="media-img rounded-circle" src="{{ result.image.url }}" height="40" width="40">
+                                {% else %}
+                                    <i class="fas fa-user media-img"></i>
+                                {% endif %}
+                            </a>
+                            <div class="media-body">
+                                <h6 class="mt-0 mb-1"><a href="/user/{{ result.username }}">{{ result.username }}</a></h6>
+                                {% if result.bio %}
+                                    <span class="bio">{{ result.bio }}</span><br>
+                                {% endif %}
+                                <small class="text-muted">{{ result.meme__count }} meme{% ifnotequal result.meme__count 1 %}s{% endifnotequal %}</small>
+                            </div>
+                        </li>
+                    {% empty %}
+                        <div style="width: 100%;">
+                            <div style="width: 50%;text-align: center;margin-top: 30px;">No results matching query.<br><br>Return <a href="/" style="text-decoration: none;">home</a></div>
+                        </div>
+                    {% endfor %}
+                </ul>
+                {% if results %}
+                    <div><small id="load-more-search" onclick="load_comments('{{ meme.uuid }}')">Load more</small></div>
+                {% endif %}
+            </div>
+            <div class="col-lg-3"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    {% load static %}
+    <script src="{% static 'memes/index.js' %}"></script>
+
+    <script type="text/javascript">
+        document.querySelector("#page").textContent = "Search";
+        document.querySelector("#search").style.backgroundColor = "whitesmoke";
+
+        const url = new URL(window.location.href);
+        const queries = url.searchParams.get("q");
+        document.querySelector("#search").value = queries;
+
+        document.querySelectorAll(".bio").forEach(b => {
+            b.textContent = b.textContent.replace(/\n/g, "  ");
+        });
+    </script>
+
+    <style type="text/css">
+        .media-img {
+            height: 40px;
+            width: 40px;
+        }
+        .media i.fa-user {
+            font-size: 40px;
+            color: lightgrey;
+        }
+        .media-img, i.fa-user {
+            cursor: pointer;
+            margin-bottom: 10px;
+            margin-top: 3px;
+        }
+        .media-body a {
+            color: darkgrey;
+            text-decoration: none;
+        }
+        .media-body span {
+            font-size: 13px;
+        }
+        .bio {
+            white-space: pre-wrap;
+        }
+        #load-more-search {
+            color: royalblue;
+            cursor: pointer;
+        }
+    </style>
+{% endblock %}
