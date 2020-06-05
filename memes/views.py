@@ -1,22 +1,13 @@
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.hashers import check_password, make_password
-from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse, HttpResponseBadRequest
-from django.shortcuts import render, get_object_or_404
-from django.urls import reverse
-# from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, Http404, JsonResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
-# from django.views.decorators.csrf import ensure_csrf_cookie
-from django.db.models import F, Q, Count, Sum, Exists, OuterRef, Subquery, IntegerField
-# from django.db.models.functions import Coalesce
+from django.db.models import F, Q
 from django.utils import timezone
-from django.core.exceptions import PermissionDenied
-# from django.views.decorators.http import require_http_methods
 # from django.views.decorators.cache import cache_page
 
 from .models import *
 from .utils import UOC, SFT, CATEGORIES
 from datetime import timedelta
-from time import perf_counter
 from random import randint
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -43,15 +34,11 @@ def user_session(request):
 def meme_view(request, uuid):
     """ Page for individual meme with comments """
 
-    # if uuid == "random":
-    #     queryset = Meme.objects.filter(hidden=False).filter(Q(page=None)|Q(page__private=False))
-    #     n = randint(0, queryset.count() - 1)
-    #     uuid = queryset.values("uuid")[n]
-
     meme = get_object_or_404(Meme.objects.select_related("user", "page"), uuid=uuid)
 
     if meme.page and meme.page.private:
-        if not request.user.is_authenticated or (not request.user.subscriptions.filter(id=meme.page_id).exists() and meme.page.admin != request.user):
+        if (not request.user.is_authenticated or
+                (not request.user.subscriptions.filter(id=meme.page_id).exists() and meme.page.admin_id != request.user.id)):
             return HttpResponse(status=403)
 
     return Response({
@@ -93,6 +80,9 @@ def random(request):
 @api_view(["GET"])
 def get_likes(request, obj):
     uuids = request.query_params.getlist("u")[:20]
+    if not uuids:
+        return JsonResponse([], safe=False)
+
     if obj == "m":
         return Response(Like.objects.filter(user=request.user, meme__uuid__in=uuids).annotate(uuid=F("meme__uuid")).values("uuid", "point"))
     elif obj == "c":
@@ -103,11 +93,16 @@ def get_likes(request, obj):
 
 @api_view(("PUT", "DELETE"))
 def like(request):
-    uuid = request.GET["u"]
-    type0 = request.GET["t"]
-    point = 1 if request.GET["v"] == "l" else -1
+    uuid = request.GET.get("u")
+    type_ = request.GET.get("t")
+    vote = request.GET.get("v")
 
-    if type0 == "m":
+    if not uuid or not type_ or vote not in ("l", "d"):
+        return HttpResponseBadRequest()
+
+    point = 1 if vote == "l" else -1
+
+    if type_ == "m":
         if request.method == "PUT":
             meme = get_object_or_404(Meme, uuid=uuid)
             obj, created = Like.objects.update_or_create(user=request.user, meme=meme, defaults={"point": point, "liked_on": timezone.now()})
@@ -115,7 +110,7 @@ def like(request):
         elif request.method == "DELETE":
             Like.objects.filter(user=request.user, meme__uuid=uuid).delete()
             return HttpResponse(status=204)
-    elif type0 == "c":
+    elif type_ == "c":
         if request.method == "PUT":
             comment = get_object_or_404(Comment.objects.prefetch_related("meme"), uuid=uuid)
             obj, created = Like.objects.update_or_create(user=request.user, comment=comment, defaults={"point": point, "liked_on": timezone.now()})
@@ -131,21 +126,22 @@ def like(request):
 def comment(request, action):
     if request.method == "POST" and action == "post":
         """ Post new comments only """
+        uuid = request.POST.get("uuid")
         content = request.POST.get("content", "")[:150].strip()
         image = request.FILES.get("image")
-        if not content and not image:
+        if not uuid or (not content and not image):
             return HttpResponseBadRequest()
 
-        meme = get_object_or_404(Meme, uuid=request.POST["uuid"])
+        meme = get_object_or_404(Meme, uuid=uuid)
 
-        new_comment = Comment.objects.create(
+        comment = Comment.objects.create(
             user=request.user,
             meme=meme,
             content=content,
             image=image
         )
 
-        return JsonResponse({"uuid": new_comment.uuid})
+        return JsonResponse({"uuid": comment.uuid})
 
     elif request.method == "POST" and action == "edit":
         """ Edit comments and replies """
@@ -160,12 +156,13 @@ def comment(request, action):
 
     elif request.method == "DELETE" and action == "delete":
         """ Delete comments and replies """
-        Comment.objects.filter(user=request.user, uuid=request.GET.get("u")).update(deleted=True)
-        # c = Comment.objects.only("deleted").get(user=request.user, uuid=request.GET.get("u"))
-        # c.deleted = True
-        # c.save()
+        if "u" in request.GET:
+            Comment.objects.filter(user=request.user, uuid=request.GET["u"]).update(deleted=True)
+            # c = Comment.objects.only("deleted").get(user=request.user, uuid=request.GET.get("u"))
+            # c.deleted = True
+            # c.save()
 
-        return HttpResponse(status=204)
+            return HttpResponse(status=204)
 
     raise Http404
 
@@ -173,10 +170,10 @@ def comment(request, action):
 @api_view(["POST"])
 def reply(request):
     """ Reply to comments """
-    c_uuid = request.POST["c_uuid"]
+    c_uuid = request.POST.get("c_uuid")
     content = request.POST.get("content", "")[:150].strip()
     image = request.FILES.get("image")
-    if not content and not image:
+    if not c_uuid or (not content and not image):
         return HttpResponseBadRequest()
 
     reply_to = get_object_or_404(Comment.objects.select_related("meme"), uuid=c_uuid, deleted=False)
@@ -198,28 +195,28 @@ def upload(request):
     page_name = request.POST.get("page")
     file = request.FILES.get("file")
     caption = request.POST.get("caption", "")[:100]
-    c_embedded = request.POST["embed_caption"] == "true"
-    nsfw = request.POST["nsfw"] == "true"
+    c_embedded = request.POST.get("embed_caption") == "true"
+    nsfw = request.POST.get("nsfw") == "true"
     content_type = file.content_type if file else None
     category_name = request.POST.get("category")
 
     if file:
         if category_name:
             if category_name not in CATEGORIES:
-                return JsonResponse({"success": False, "message": "Category not found."})
+                return JsonResponse({"success": False, "message": "Category not found"})
             # category = get_object_or_404(Category, name=category_name)
             category = Category.objects.get_or_create(name=category_name)[0]    # Change this before production
 
         if content_type not in SFT or (content_type == "video/quicktime" and not file.name.endswith(".mov")):
-            return JsonResponse({"success": False, "message": "Unsupported file type."})
+            return JsonResponse({"success": False, "message": "Unsupported file type"})
 
         if page_name:
-            page = get_object_or_404(Page, name=page_name)
-            if page.admin != request.user:
+            page = get_object_or_404(Page.objects.only("admin_id", "permissions"), name=page_name)
+            if page.admin_id != request.user.id:
                 if not page.permissions:
-                    return JsonResponse({"success": False, "message": "Only admin of this page can post."})
+                    return JsonResponse({"success": False, "message": "Only admin of this page can post"})
                 if not page.subscribers.filter(id=request.user.id).exists():
-                    return JsonResponse({"success": False, "message": "Must be subscribed to post."})
+                    return JsonResponse({"success": False, "message": "Must be subscribed to post"})
 
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
@@ -245,14 +242,13 @@ def upload(request):
             return JsonResponse({"success": True, "uuid": meme.uuid}, status=201)
         else:
             return JsonResponse({"success": True}, status=201)
-    
-    return JsonResponse({"success": False, "message": "Error: No file uploaded."})
+
+    return JsonResponse({"success": False, "message": "Error: No file uploaded"})
 
 
 @api_view(["GET"])
 def notifications(request):
-    n = Notification.objects.filter(recipient=request.user)
-    return render(request, "memes/notifications.html", {"notifications": n})
+    return Response(Notification.objects.filter(recipient=request.user))
 
 
 @api_view(["GET"])
@@ -277,10 +273,9 @@ def page(request, name):
 
     if request.user.is_authenticated:
         response["is_subscribed"] = page.subscribers.filter(id=request.user.id).exists()
-        response["is_page_admin"] = page.admin == request.user
 
     # Prevent loading memes if page is private and user is not subscribed or page admin
-    response["show"] = not page.private or response.get("is_subscribed") or response.get("is_page_admin")
+    response["show"] = not page.private or response.get("is_subscribed") or page.admin_id == request.user.id
 
     return Response(response)
 
@@ -291,7 +286,7 @@ def follow(request, username):
     if user.username == username:
         return HttpResponseBadRequest()
 
-    user_to_follow = get_object_or_404(User.objects.only("id", "num_followers"), username=username)
+    user_to_follow = get_object_or_404(User.objects.only("id"), username=username)
     is_following = user.follows.filter(id=user_to_follow.id).exists()
 
     if is_following:
@@ -337,6 +332,7 @@ def new_page(request):
         return JsonResponse({"success": False, "taken": True})
     elif Page.objects.filter(admin=request.user).count() > 2:
         return JsonResponse({"success": False, "maximum": True})
+
     dname = request.POST.get("display_name", "")[:32].strip()
     private = request.POST.get("private") == "true"
     perm = request.POST.get("permissions") != "false"
@@ -350,9 +346,12 @@ def new_page(request):
 @api_view(["POST"])
 def update(request, field):
     """ Update bio for user or description for page """
-
     if field == "bio":
+        if "new_val" not in request.POST:
+            return HttpResponseBadRequest()
+
         new_bio = request.POST["new_val"][:150].strip()
+
         if request.user.bio != new_bio:
             request.user.bio = new_bio
             request.user.save(update_fields=["bio"])
@@ -360,35 +359,24 @@ def update(request, field):
         return JsonResponse({"new_val": new_bio})
 
     elif field == "description":
+        if "name" not in request.POST or "new_val" not in request.POST:
+            return HttpResponseBadRequest()
+
         new_description = request.POST["new_val"][:150].strip()
-        name = request.POST["name"]
+        page = get_object_or_404(Page.objects.only("admin_id", "description"), name=request.POST["name"])
 
-        page = get_object_or_404(Page.objects.only("admin_id", "description"), name=name)
-        if request.user.id == page.admin_id:
-            if page.description != new_description:
-                page.description = new_description
-                page.save(update_fields=["description"])
+        if request.user.id == page.admin_id and page.description != new_description:
+            page.description = new_description
+            page.save(update_fields=["description"])
 
-                return JsonResponse({"new_val": new_description})
+            return JsonResponse({"new_val": new_description})
 
     return HttpResponseBadRequest()
 
 
-def login_view(request):
-    if request.method == "POST":
-        username = request.POST["username"]
-        password = request.POST["password"]
-
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None:
-            login(request, user)
-
-            return JsonResponse({"success": True})
-        else:
-            return JsonResponse({"success": False})
-
-    raise Http404
+def logout_view(request):
+    # Blacklist token
+    pass
 
 
 @api_view(["POST"])
@@ -400,9 +388,9 @@ def register(request):
     #     "refresh": f"{refresh_token}",
     #     "access": f"{refresh_token.access_token}"
     # })
-    username = request.POST["username"]
-    email = request.POST["email"]
-    password1 = request.POST["password1"]
+    username = request.POST.get("username")
+    email = request.POST.get("email")
+    password1 = request.POST.get("password1")
 
     if not username or not email or not password1:
         error = "Username" if not username else "Email" if not email else "Password"
@@ -415,7 +403,7 @@ def register(request):
         return JsonResponse({"message": "Please enter a valid email", "field": "e"})
     # if len(password1) < 6:
         # return JsonResponse({"message": "Password must be at least 6 characters", "field": "p"})
-    if password1 != request.POST["password2"]:
+    if password1 != request.POST.get("password2"):
         return JsonResponse({"message": "Password does not match", "field": "p2"})
     if User.objects.filter(username__iexact=username).exists():
         return JsonResponse({"message": "Username already taken", "field": "u", "taken": True})
@@ -433,14 +421,9 @@ def register(request):
                 "access": f"{refresh_token.access_token}"
             })
     except IntegrityError:
-        return JsonResponse({"message": "User already exists."})
+        return JsonResponse({"message": "User already exists"})
 
-    return JsonResponse({"message": "Unexpected error occurred."})
-
-
-def logout_view(request):
-    logout(request)
-    return HttpResponseRedirect(reverse("index"))
+    return JsonResponse({"message": "Unexpected error occurred"})
 
 
 @api_view(["DELETE", "POST"])
@@ -451,9 +434,9 @@ def delete(request, model, identifier=None):
     elif model == "page":
         Page.objects.get(admin=request.user, name=identifier).delete()
     elif model == "account":
-        user = request.user
-        if check_password(request.POST["password"], user.password):
-            user.delete()
+        password = request.POST.get("password")
+        if password and request.user.check_password(password):
+            request.user.delete()
         else:
             return HttpResponseBadRequest("Password incorrect")
 
