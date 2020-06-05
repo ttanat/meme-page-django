@@ -3,6 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from . import views, api_profile
+from .api import api_settings
 
 urlpatterns = [
     path("api/auth/user/", views.user_session, name="user_session"),
@@ -19,8 +20,6 @@ urlpatterns = [
     path("notifications", views.notifications, name="notifications"),
 
     path("api/page/<str:name>", views.page, name="page"),
-    path("api/page/settings/<str:name>", views.page_settings, name="page_settings"),
-
     path("api/follow/<str:username>", views.follow, name="follow"),
     path("api/subscribe/<str:name>", views.subscribe, name="subscribe"),
     path("api/new_page", views.new_page, name="new_page"),
@@ -29,10 +28,14 @@ urlpatterns = [
     path("api/profile", api_profile.profile),
     path("api/user/<str:username>", api_profile.user_page),
 
-    # path("logout", views.logout_view, name="logout"),
     path("api/register", views.register, name="register"),
-    path("api/settings", views.user_settings, name="settings"),
+    # path("logout", views.logout_view, name="logout"),
 
+    # Settings
+    path("api/settings", api_settings.user_settings, name="settings"),
+    path("api/page/settings/<str:name>", api_settings.page_settings, name="page_settings"),
+
+    # Delete stuff
     path("api/delete/<str:model>", views.delete, name="delete"),
     path("api/delete/<str:model>/<str:identifier>", views.delete, name="delete"),
 ]
