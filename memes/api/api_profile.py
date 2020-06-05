@@ -1,12 +1,14 @@
-from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
-from .serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer
-from .models import *
+
+from memes.serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer
+from memes.models import *
+
 from rest_framework import viewsets, pagination
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
+from rest_framework.exceptions import ParseError
 
 
 @api_view(["GET"])
@@ -68,8 +70,10 @@ class UserMemesViewSet(ProfileMemesViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        return Meme.objects.filter(user__username=self.request.GET["u"], hidden=False) \
-                           .filter(Q(page=None)|Q(page__private=False)).order_by("-id")
+        if "u" not in self.request.GET:
+            raise ParseError
+
+        return Meme.objects.filter(user__username=self.request.GET["u"], hidden=False).filter(Q(page=None)|Q(page__private=False)).order_by("-id")
 
 
 class ProfileLikesViewSet(ProfileMemesViewSet):

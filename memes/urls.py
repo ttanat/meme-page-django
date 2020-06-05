@@ -2,8 +2,8 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 
-from . import views, api_profile
-from .api import api_settings
+from . import views
+from .api import api_profile, api_settings
 
 urlpatterns = [
     path("api/auth/user/", views.user_session, name="user_session"),
@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/new_page", views.new_page, name="new_page"),
     path("api/update/<str:field>", views.update, name="update"),
 
+    # Profile
     path("api/profile", api_profile.profile),
     path("api/user/<str:username>", api_profile.user_page),
 

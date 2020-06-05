@@ -1,4 +1,3 @@
-from django.contrib.auth.hashers import check_password
 from django.http import HttpResponse, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 
@@ -18,21 +17,31 @@ def user_settings(request):
         })
 
     elif request.method == "POST":
+        if "field" not in request.POST:
+            return HttpResponseBadRequest()
+
         field = request.POST["field"]
 
-        if field == "image" and request.FILES:
+        if field == "image":
+            if not request.FILES or "image" not in request.FILES:
+                return HttpResponseBadRequest()
+
             new_img = request.FILES["image"]
             if new_img.content_type not in SFT[:2]:
                 return HttpResponseBadRequest("Supported media types: JPEG, PNG")
+
             user.image.delete()
             user.image.save(new_img.name, new_img)
             user.resize_img()
 
         elif field == "nsfw":
-            user.show_nsfw = request.POST["show_nsfw"] == "true"
+            user.show_nsfw = request.POST.get("show_nsfw") == "true"
             user.save(update_fields=["show_nsfw"])
 
         elif field == "email":
+            if "email" not in request.POST:
+                return HttpResponseBadRequest()
+
             email = request.POST["email"]
             if User.objects.filter(email=email).exists():
                 return HttpResponseBadRequest("Email is already being used with another account")
@@ -41,20 +50,28 @@ def user_settings(request):
                 user.save(update_fields=["email"])
 
         elif field == "password":
-            password1 = request.POST["password1"]
-            if password1 != request.POST["password2"]:
-                return HttpResponseBadRequest("Password does not match")
-            # elif len(password1) < 6:
-            #     return HttpResponseBadRequest("Password must be at least 6 characters")
-            elif check_password(request.POST["old_password"], user.password):
-                user.password = make_password(password1)
-                user.save(update_fields=["password"])
-            else:
+            old_password = request.POST.get("old_password")
+            if not old_password or not user.check_password(old_password):
                 return HttpResponseBadRequest("Password incorrect")
 
-        return HttpResponse()
+            password1 = request.POST.get("password1", "")
+            # if len(password1) < 6:
+            #     HttpResponseBadRequest("Password must be at least 6 characters")
+            if password1 != request.POST.get("password2"):
+                return HttpResponseBadRequest("Password does not match")
+            else:
+                # Change password
+                user.set_password(password1)
+                user.save(update_fields=["password"])
+
+                return HttpResponse()
+
+            return HttpResponseBadRequest()
 
     elif request.method == "DELETE":
+        if "f" not in request.GET:
+            return HttpResponseBadRequest()
+
         field = request.GET["f"]
         if field == "image":
             user.image.delete()
@@ -70,6 +87,7 @@ def user_settings(request):
 @api_view(("GET", "POST", "DELETE"))
 def page_settings(request, name):
     page = get_object_or_404(Page, admin=request.user, name=name)
+
     if request.method == "GET":
         return Response({
             "name": page.name,
@@ -82,14 +100,15 @@ def page_settings(request, name):
             "mods": page.moderators.values_list("username", flat=True),
             # "pending": page moderators pending
         })
+
     elif request.method == "POST":
         if request.FILES:
-            if request.FILES.get("image"):
+            if "image" in request.FILES:
                 img = request.FILES["image"]
                 page.image.delete()
                 page.image.save(img.name, img)
                 page.resize_img()
-            elif request.FILES.get("cover"):
+            elif "cover" in request.FILES:
                 cover = request.FILES["cover"]
                 page.cover.delete()
                 page.cover.save(cover.name, cover)
@@ -104,8 +123,12 @@ def page_settings(request, name):
             page.save(update_fields=("display_name", "description", "private", "permissions"))
 
         return HttpResponse()
+
     elif request.method == "DELETE":
-        field = request.GET.get("d")
+        if "d" not in request.GET:
+            return HttpResponseBadRequest()
+
+        field = request.GET["d"]
         if field == "image":
             page.image.delete()
         elif field == "cover":

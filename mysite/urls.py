@@ -16,7 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework import routers
-from memes import api_views, api_profile
+from memes import api_views
+from memes.api import api_profile
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 import notifications.urls
 
