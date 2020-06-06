@@ -34,7 +34,7 @@ urlpatterns = [
 
     # Settings
     path("api/settings", api_settings.user_settings, name="settings"),
-    path("api/page/settings/<str:name>", api_settings.page_settings, name="page_settings"),
+    path("api/page/settings/<str:name>", api_settings.PageSettings.as_view(), name="page_settings"),
 
     # Delete stuff
     path("api/delete/<str:model>", views.delete, name="delete"),
@@ -43,6 +43,3 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
-    # path("something", SomethingDetailView.as_view(), name="something")

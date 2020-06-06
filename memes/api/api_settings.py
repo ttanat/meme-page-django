@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from memes.models import User, Page
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 @api_view(("GET", "POST", "DELETE"))
@@ -44,7 +45,7 @@ def user_settings(request):
 
             email = request.POST["email"]
             if User.objects.filter(email=email).exists():
-                return HttpResponseBadRequest("Email is already being used with another account")
+                return HttpResponseBadRequest("Email already in use")
             else:
                 user.email = email
                 user.save(update_fields=["email"])
@@ -84,11 +85,13 @@ def user_settings(request):
     raise Http404
 
 
-@api_view(("GET", "POST", "DELETE"))
-def page_settings(request, name):
-    page = get_object_or_404(Page, admin=request.user, name=name)
+class PageSettings(APIView):
+    def get_object(self, user, name, fields=None):
+        return get_object_or_404(Page.objects.only(*fields), admin=user, name=name)
 
-    if request.method == "GET":
+    def get(self, request, name):
+        page = self.get_object(request.user, name, ("name", "display_name", "image", "cover", "description", "private", "permissions"))
+
         return Response({
             "name": page.name,
             "dname": page.display_name,
@@ -97,18 +100,20 @@ def page_settings(request, name):
             "description": page.description,
             "private": page.private,
             "permissions": page.permissions,
-            "mods": page.moderators.values_list("username", flat=True),
+            "mods": User.objects.filter(moderating=page).values_list("username", flat=True),
             # "pending": page moderators pending
         })
 
-    elif request.method == "POST":
+    def post(self, request, name):
         if request.FILES:
             if "image" in request.FILES:
+                page = self.get_object(request.user, name, ["image"])
                 img = request.FILES["image"]
                 page.image.delete()
                 page.image.save(img.name, img)
                 page.resize_img()
             elif "cover" in request.FILES:
+                page = self.get_object(request.user, name, ["cover"])
                 cover = request.FILES["cover"]
                 page.cover.delete()
                 page.cover.save(cover.name, cover)
@@ -116,26 +121,31 @@ def page_settings(request, name):
             else:
                 return HttpResponseBadRequest()
         else:
+            page = self.get_object(request.user, name, ("display_name", "description", "private", "permissions"))
             page.display_name = request.POST.get("dname", "")[:32].strip()
             page.description = request.POST.get("description", "")[:150].strip()
             page.private = request.POST.get("private") == "true"
             page.permissions = request.POST.get("permissions") != "false"
-            page.save(update_fields=("display_name", "description", "private", "permissions"))
+            page.save()
 
         return HttpResponse()
 
-    elif request.method == "DELETE":
+    def delete(self, request, name):
         if "d" not in request.GET:
             return HttpResponseBadRequest()
 
         field = request.GET["d"]
         if field == "image":
+            page = self.get_object(request.user, name, ["image"])
             page.image.delete()
         elif field == "cover":
+            page = self.get_object(request.user, name, ["cover"])
             page.cover.delete()
         elif field == "mods":
+            page = self.get_object(request.user.id, name, ["id"])
             page.moderators.remove(*User.objects.filter(username__in=request.GET.getlist("u")))
         elif field == "page":
+            page = self.get_object(request.user.id, name, ["id"])
             page.delete()
 
         return HttpResponse(status=204)
