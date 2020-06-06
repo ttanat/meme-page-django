@@ -2,6 +2,8 @@ from django.http import HttpResponse, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 
 from memes.models import User, Page
+from memes.utils import SFT
+
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -67,7 +69,10 @@ def user_settings(request):
 
                 return HttpResponse()
 
+        else:
             return HttpResponseBadRequest()
+
+        return HttpResponse()
 
     elif request.method == "DELETE":
         if "f" not in request.GET:
@@ -107,13 +112,13 @@ class PageSettings(APIView):
     def post(self, request, name):
         if request.FILES:
             if "image" in request.FILES:
-                page = self.get_object(request.user, name, ["image"])
+                page = self.get_object(request.user, name, ("name", "image"))
                 img = request.FILES["image"]
                 page.image.delete()
                 page.image.save(img.name, img)
                 page.resize_img()
             elif "cover" in request.FILES:
-                page = self.get_object(request.user, name, ["cover"])
+                page = self.get_object(request.user, name, ("name", "cover"))
                 cover = request.FILES["cover"]
                 page.cover.delete()
                 page.cover.save(cover.name, cover)
