@@ -408,7 +408,7 @@ def register(request):
     if User.objects.filter(username__iexact=username).exists():
         return JsonResponse({"message": "Username already taken", "field": "u", "taken": True})
     if User.objects.filter(email=email).exists():
-        return JsonResponse({"message": "Email is already being used with another account", "field": "e"})
+        return JsonResponse({"message": "Email already in use", "field": "e"})
 
     user = None
     try:
