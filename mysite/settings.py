@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'notifications'
+    # 'notifications'
 ]
 
 MIDDLEWARE = [
@@ -194,30 +194,28 @@ CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
     "http://localhost:8000",
 )
-# CORS_ALLOW_METHODS = [
-#     'DELETE',
-#     'GET',
-#     'OPTIONS',
-#     'PATCH',
-#     'POST',
-#     'PUT',
-# ]
-# CORS_ALLOW_HEADERS = [
-#     'accept',
-#     'accept-encoding',
-#     'authorization',
-#     'content-type',
-#     'dnt',
-#     'origin',
-#     'user-agent',
-#     'x-csrftoken',
-#     'x-requested-with',
-#     'Access-Control-Allow-Origin'
-# ]
 
 
 AUTH_USER_MODEL = 'memes.User'
 
-DJANGO_NOTIFICATIONS_CONFIG = {
-    'USE_JSONFIELD': True
-}
+# LOGGING = {
+#     'version': 1,
+#     'filters': {
+#         'require_debug_true': {
+#             '()': 'django.utils.log.RequireDebugTrue',
+#         }
+#     },
+#     'handlers': {
+#         'console': {
+#             'level': 'DEBUG',
+#             'filters': ['require_debug_true'],
+#             'class': 'logging.StreamHandler',
+#         }
+#     },
+#     'loggers': {
+#         'django.db.backends': {
+#             'level': 'DEBUG',
+#             'handlers': ['console'],
+#         }
+#     }
+# }
