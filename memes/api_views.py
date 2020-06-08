@@ -165,21 +165,21 @@ class SearchPageViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["name", "display_name"]
 
 
-# class NotificationPagination(pagination.PageNumberPagination):
-#     page_size = 20
+class NotificationPagination(pagination.PageNumberPagination):
+    page_size = 20
 
-#     def get_paginated_response(self, data):
-#         return Response({
-#             "count": self.page.paginator.count,
-#             "results": data
-#         })
+    def get_paginated_response(self, data):
+        return Response({
+            "next": self.get_next_link(),
+            "results": data
+        })
 
 
-# class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
-#     # model = Notification
-#     serializer_class = NotificationSerializer
-#     pagination_class = NotificationPagination
-#     # permission_classes = [IsAuthenticated]
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    model = Notification
+    serializer_class = NotificationSerializer
+    pagination_class = NotificationPagination
+    permission_classes = [IsAuthenticated]
 
-#     def get_queryset(self):
-#         return Notification.objects.filter(user=self.request.user).order_by("-id")
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user).order_by("-timestamp")

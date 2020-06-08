@@ -31,6 +31,25 @@ def user_session(request):
 
 
 @api_view(["GET"])
+def nav_notifications(request):
+    notifs = Notification.objects.filter(recipient=request.user, seen=False)
+    to_send = notifs[:5]
+
+    # Must force evaluation of queryset before updating
+    response = {
+        "count": notifs.count(),
+        "list": [n for n in to_send.values("link", "image", "message")]
+    }
+
+    for n in to_send:
+        n.seen = True
+
+    Notification.objects.bulk_update(to_send, ["seen"])
+
+    return Response(response)
+
+
+@api_view(["GET"])
 def meme_view(request, uuid):
     """ Page for individual meme with comments """
 
@@ -60,10 +79,16 @@ def meme_view(request, uuid):
 def full_res(request, obj, uuid):
     if obj == "m":
         meme = get_object_or_404(Meme.objects.only("file", "content_type"), uuid=uuid)
-        return JsonResponse({"url": request.build_absolute_uri(meme.file.url), "isVid": meme.content_type[:6] == "video/"})
+        return JsonResponse({
+            "url": request.build_absolute_uri(meme.file.url),
+            "isVid": meme.content_type.startswith("video/")
+        })
     elif obj == "c":
-        url = get_object_or_404(Comment.objects.only("image"), uuid=uuid).image.url
-        return JsonResponse({"url": request.build_absolute_uri(url)})
+        comment = get_object_or_404(Comment.objects.select_related("meme").only("image", "meme__uuid"), uuid=uuid)
+        return JsonResponse({
+            "url": request.build_absolute_uri(comment.image.url),
+            "m_uuid": comment.meme.uuid
+        })
 
     raise Http404
 
@@ -244,11 +269,6 @@ def upload(request):
             return JsonResponse({"success": True}, status=201)
 
     return JsonResponse({"success": False, "message": "Error: No file uploaded"})
-
-
-@api_view(["GET"])
-def notifications(request):
-    return Response(Notification.objects.filter(recipient=request.user))
 
 
 @api_view(["GET"])

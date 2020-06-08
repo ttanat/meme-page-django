@@ -1,6 +1,5 @@
 from rest_framework import serializers
-# from .models import Meme, Comment, Like, User, Page, Notification, Tag
-from .models import Meme, Comment, Like, User, Page, Tag
+from .models import Meme, Comment, Like, User, Page, Notification
 from django.utils import timezone
 from django.db.models import Q, F
 from django.contrib.auth import authenticate
@@ -122,15 +121,10 @@ class SearchPageSerializer(serializers.ModelSerializer):
             return None
 
 
-# class NotificationSerializer(serializers.ModelSerializer):
-#     # description = serializers.SerializerMethodField()
-
-#     class Meta:
-#         model = Notification
-#         fields = ("description", "timestamp")
-
-#     # def get_message(self, obj):
-#     #     return obj.message if obj.message else f"{obj}"
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ("link", "seen", "message", "timestamp")
 
 
 class ProfileMemesSerializer(serializers.ModelSerializer):

@@ -7,6 +7,9 @@ from .api import api_profile, api_settings
 
 urlpatterns = [
     path("api/auth/user/", views.user_session, name="user_session"),
+
+    path("api/notifications/nav", views.nav_notifications, name="notifications"),
+
     path("api/m/<str:uuid>", views.meme_view, name="meme_view"),
     path("api/full_res/<str:obj>/<str:uuid>", views.full_res, name="full_res"),
     path("api/random", views.random, name="random"),
@@ -16,8 +19,6 @@ urlpatterns = [
     path("api/comment/<str:action>", views.comment, name="comment"),
     path("api/reply", views.reply, name="reply"),
     path("api/upload", views.upload, name="upload"),
-
-    path("notifications", views.notifications, name="notifications"),
 
     path("api/page/<str:name>", views.page, name="page"),
     path("api/follow/<str:username>", views.follow, name="follow"),
