@@ -3,7 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from . import views
-from .api import api_profile, api_settings
+from .api import api_profile, api_page, api_settings
 
 urlpatterns = [
     path("api/auth/user/", views.user_session, name="user_session"),
@@ -20,16 +20,20 @@ urlpatterns = [
     path("api/comment/<str:action>", views.comment, name="comment"),
     path("api/reply", views.reply, name="reply"),
     path("api/upload", views.upload, name="upload"),
-
-    path("api/page/<str:name>", views.page, name="page"),
-    path("api/follow/<str:username>", views.follow, name="follow"),
-    path("api/subscribe/<str:name>", views.subscribe, name="subscribe"),
-    path("api/new_page", views.new_page, name="new_page"),
-    path("api/update/<str:field>", views.update, name="update"),
-
+    
     # Profile
     path("api/profile", api_profile.profile),
     path("api/user/<str:username>", api_profile.user_page),
+    # Follow/unfollow user
+    path("api/follow/<str:username>", views.follow, name="follow"),
+    # Update profile bio or page description
+    path("api/update/<str:field>", views.update, name="update"),
+
+    # Page
+    path("api/page/<str:name>", api_page.page, name="page"),
+    path("api/subscribe/<str:name>", api_page.subscribe, name="subscribe"),
+    path("api/subscriberequest/<str:name>", api_page.subscribe_request, name="subscribe_request"),
+    path("api/new_page", api_page.new_page, name="new_page"),
 
     path("api/register", views.register, name="register"),
     # path("logout", views.logout_view, name="logout"),
