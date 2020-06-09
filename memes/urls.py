@@ -36,7 +36,7 @@ urlpatterns = [
 
     # Settings
     path("api/settings", api_settings.user_settings, name="settings"),
-    path("api/page/settings/<str:name>", api_settings.PageSettings.as_view(), name="page_settings"),
+    path("api/page/<str:name>/settings", api_settings.PageSettings.as_view(), name="page_settings"),
 
     # Delete stuff
     path("api/delete/<str:model>", views.delete, name="delete"),
