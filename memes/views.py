@@ -311,8 +311,7 @@ def page(request, name):
             "permissions": page.permissions,
             "subs": page.num_subscribers,
             "num_posts": page.num_posts,
-            "admin": page.adm,
-            "moderators": page.moderators.values_list("username", flat=True)
+            "admin": page.adm
         }
     }
 
@@ -321,6 +320,9 @@ def page(request, name):
 
     # Prevent loading memes if page is private and user is not subscribed or page admin
     response["show"] = not page.private or response.get("is_subscribed") or page.admin_id == request.user.id
+
+    if response["show"]:
+        response["page"]["moderators"] = page.moderators.values_list("username", flat=True)
 
     return Response(response)
 
