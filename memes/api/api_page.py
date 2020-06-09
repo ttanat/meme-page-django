@@ -1,4 +1,4 @@
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.db.models import F
 
@@ -29,6 +29,10 @@ def page(request, name):
 
     if request.user.is_authenticated:
         response["is_subscribed"] = page.subscribers.filter(id=request.user.id).exists()
+
+        # Check if user has requested to subscribe to page
+        if page.private and not response["is_subscribed"]:
+            response["sub_req_exists"] = SubscribeRequest.objects.filter(user=request.user, page=page).exists()
 
     # Prevent loading memes if page is private and user is not subscribed or page admin
     response["show"] = not page.private or response.get("is_subscribed") or page.admin_id == request.user.id
@@ -64,7 +68,7 @@ def subscribe(request, name):
 
 
 # name only used in GET
-@api_view(("GET", "POST", "DELETE"))
+@api_view(("GET", "PUT", "DELETE"))
 def subscribe_request(request, name):
     """ Handle subscribe requests for private pages """
 
@@ -75,14 +79,21 @@ def subscribe_request(request, name):
 
         reqs = SubscribeRequest.objects.annotate(username=F("user__username")) \
                                 .filter(page=page) \
-                                .values("id", "username") \
+                                .values("id", "username", "timestamp") \
                                 .order_by("id")
 
         # Last ID of "subscribe request" sent (prevents showing duplicates)
         if "lid" in request.GET:
             reqs = reqs.filter(id__gt=request.GET["lid"])
 
-        return Response(reqs)
+        # Get first 25 requests
+        results = reqs[:25]
+
+        return Response({
+            # If there are more requests, get largest ID of results
+            "lid": results[25]["id"] if reqs.count() > 25 else None,
+            "results": results
+        })
 
     elif request.method == "PUT":
         """ Accept request and delete object """
