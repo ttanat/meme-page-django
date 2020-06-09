@@ -32,7 +32,7 @@ urlpatterns = [
     # Page
     path("api/page/<str:name>", api_page.page, name="page"),
     path("api/subscribe/<str:name>", api_page.subscribe, name="subscribe"),
-    path("api/subscriberequest/<str:name>", api_page.subscribe_request, name="subscribe_request"),
+    path("api/subscribe_request/<str:name>", api_page.subscribe_request, name="subscribe_request"),
     path("api/new_page", api_page.new_page, name="new_page"),
 
     path("api/register", views.register, name="register"),
