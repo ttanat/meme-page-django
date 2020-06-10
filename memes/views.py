@@ -18,20 +18,20 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def user_session(request):
     user = request.user
-    if user.is_authenticated:
-        return Response({
-            "username": user.username,
-            "image": request.build_absolute_uri(user.image.url) if user.image else None,
-            "moderating": Page.objects.filter(Q(admin=user)|Q(moderators=user)).annotate(dname=F("display_name")).values("name", "dname", "private"),
-            "subscriptions": user.subscriptions.annotate(dname=F("display_name")).values("name", "dname", "private")
-        })
 
-    return HttpResponse(status=401)
+    return Response({
+        "username": user.username,
+        "image": request.build_absolute_uri(user.image.url) if user.image else None,
+        "moderating": Page.objects.filter(Q(admin=user)|Q(moderators=user)).annotate(dname=F("display_name")).values("name", "dname", "private"),
+        "subscriptions": user.subscriptions.annotate(dname=F("display_name")).values("name", "dname", "private")
+    })
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def nav_notifications(request):
     notifs = Notification.objects.filter(recipient=request.user, seen=False)
     to_send = notifs[:5]
@@ -51,6 +51,7 @@ def nav_notifications(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def notifications(request):
     notifs = Notification.objects.filter(recipient=request.user).order_by("-timestamp")
 
@@ -128,6 +129,7 @@ def random(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def get_likes(request, obj):
     uuids = request.query_params.getlist("u")[:20]
     if not uuids:
@@ -142,6 +144,7 @@ def get_likes(request, obj):
 
 
 @api_view(("PUT", "DELETE"))
+@permission_classes([IsAuthenticated])
 def like(request):
     uuid = request.GET.get("u")
     type_ = request.GET.get("t")
@@ -173,6 +176,7 @@ def like(request):
 
 
 @api_view(("POST", "DELETE"))
+@permission_classes([IsAuthenticated])
 def comment(request, action):
     if request.method == "POST" and action == "post":
         """ Post new comments only """
@@ -218,6 +222,7 @@ def comment(request, action):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def reply(request):
     """ Reply to comments """
     c_uuid = request.POST.get("c_uuid")
@@ -240,6 +245,7 @@ def reply(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def upload(request):
     page = category = None
     page_name = request.POST.get("page")
@@ -391,6 +397,7 @@ def new_page(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def update(request, field):
     """ Update bio for user or description for page """
     if field == "bio":

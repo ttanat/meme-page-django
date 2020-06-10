@@ -6,7 +6,7 @@ from django.db import transaction
 from memes.models import Page, SubscribeRequest, User, InviteLink
 
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
@@ -47,6 +47,7 @@ def page(request, name):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def subscribe(request, name):
     page_to_sub = get_object_or_404(Page.objects.only("id", "admin_id", "private"), name=name)
     is_subscribed = page_to_sub.subscribers.filter(id=request.user.id).exists()
@@ -74,6 +75,7 @@ def subscribe(request, name):
 
 class HandleSubscribeRequest(APIView):
     """ Handle subscribe requests for private pages """
+    permission_classes = [IsAuthenticated]
 
     def get_page(self, user, name):
         return get_object_or_404(Page.objects.only("id"), admin=user, name=name)
@@ -193,6 +195,7 @@ class HandleInviteLink(APIView):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def new_page(request):
     name = request.POST.get("name", "")[:32].strip()
 

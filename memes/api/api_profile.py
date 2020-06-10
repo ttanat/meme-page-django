@@ -12,6 +12,7 @@ from rest_framework.exceptions import ParseError
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def profile(request):
     """ Get info for profile page """
 
