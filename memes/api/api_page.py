@@ -4,6 +4,7 @@ from django.db.models import F
 
 from memes.models import Page, SubscribeRequest, User
 
+from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -69,19 +70,19 @@ def subscribe(request, name):
     return HttpResponseBadRequest()
 
 
-@api_view(("GET", "PUT", "DELETE"))
-def subscribe_request(request, name):
+class HandleSubscribeRequest(APIView):
     """ Handle subscribe requests for private pages """
 
-    page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
+    def get_page(self, user, name):
+        return get_object_or_404(Page.objects.only("id"), admin=user, name=name)
 
-    if request.method == "GET":
+    def get(self, request, name):
         """ ID of request is sent too """
 
         reqs = SubscribeRequest.objects.annotate(username=F("user__username")) \
-                                .filter(page=page) \
-                                .values("id", "username", "timestamp") \
-                                .order_by("id")
+                                       .filter(page=self.get_page(request.user, name)) \
+                                       .values("id", "username", "timestamp") \
+                                       .order_by("id")
 
         # Last ID of "subscribe request" sent (prevents showing duplicates)
         if "lid" in request.GET:
@@ -96,35 +97,32 @@ def subscribe_request(request, name):
             "results": results
         })
 
-    elif request.method == "PUT":
+    def put(self, request, name):
         """ Accept request and delete object """
 
         if "id" not in request.GET:
             return HttpResponseBadRequest()
 
-        sub_req = get_object_or_404(
-            SubscribeRequest.objects.only("user_id"),
-            id=request.GET["id"]
-        )
+        sub_req = get_object_or_404(SubscribeRequest.objects.only("user_id"), id=request.GET["id"])
 
         # Get user to add to subscribers
         user_to_add = User.objects.only("id").get(id=sub_req.user_id)
 
         # Add user to subscribers of page
-        page.subscribers.add(user_to_add)
+        self.get_page(request.user, name).subscribers.add(user_to_add)
 
         # Delete the request
         sub_req.delete()
 
         return HttpResponse(status=204)
 
-    elif request.method == "DELETE":
+    def delete(self, request, name):
         """ Delete request without accepting """
 
         if "id" not in request.GET:
             return HttpResponseBadRequest()
 
-        SubscribeRequest.objects.filter(id=request.GET["id"], page=page).delete()
+        SubscribeRequest.objects.filter(id=request.GET["id"], page=self.get_page(request.user, name)).delete()
 
         return HttpResponse(status=204)
 
