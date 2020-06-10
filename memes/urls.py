@@ -33,6 +33,7 @@ urlpatterns = [
     path("api/page/<str:name>", api_page.page, name="page"),
     path("api/subscribe/<str:name>", api_page.subscribe, name="subscribe"),
     path("api/subscribe_request/<str:name>", api_page.HandleSubscribeRequest.as_view(), name="subscribe_request"),
+    path("api/invite/<str:identifier>", api_page.HandleInviteLink.as_view(), name="invite"),
     path("api/new_page", api_page.new_page, name="new_page"),
 
     path("api/register", views.register, name="register"),

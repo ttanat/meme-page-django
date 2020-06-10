@@ -1,12 +1,14 @@
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.db.models import F
+from django.db import transaction
 
-from memes.models import Page, SubscribeRequest, User
+from memes.models import Page, SubscribeRequest, User, InviteLink
 
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 
 @api_view(["GET"])
@@ -127,9 +129,73 @@ class HandleSubscribeRequest(APIView):
         return HttpResponse(status=204)
 
 
+class HandleInviteLink(APIView):
+    """ Handle invite links for private pages """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, identifier):
+        """ identifier is name of page to create link for """
+
+        if "uses" not in request.POST:
+            return HttpResponseBadRequest()
+
+        # Only page admin can create
+        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=identifier, private=True)
+
+        if InviteLink.objects.filter(page=page).count() < 100:
+            link = InviteLink.objects.create(page=page, uses=request.POST["uses"])
+
+            return JsonResponse({"uuid": link.uuid, "uses": link.uses})
+
+        return HttpResponseBadRequest()
+
+    def get(self, request, identifier):
+        """ Get invite links for page """
+
+        # Page admin access only
+        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=identifier, private=True)
+
+        return Response(InviteLink.objects.filter(page=page).values("uuid", "uses"))
+
+    def put(self, request, identifier):
+        """ identifier is uuid of link to use to add user """
+
+        link = InviteLink.objects.select_related("page").only("id", "page__id", "page__admin_id", "uses").get(uuid=identifier)
+
+        # Don't subscribe admin to their own page
+        if request.user.id == link.page.admin_id:
+            return HttpResponseBadRequest()
+
+        with transaction.atomic():
+            if link.uses < 1:
+                # Delete if no uses left
+                link.delete()
+            else:
+                # Subscribe user to page
+                link.page.add(request.user)
+                if link.uses == 1:
+                    # Delete if no uses left
+                    link.delete()
+                else:
+                    link.uses = F("uses") - 1
+                    link.save(update_fields=["uses"])
+                    # Delete subscribe request for user on this page if it exists
+                    SubscribeRequest.objects.filter(user=request.user, page=link.page).delete()
+
+        return HttpResponse()
+
+    def delete(self, request, identifier):
+        """ identifier is uuid of link to delete """
+
+        InviteLink.objects.filter(uuid=identifier, page__admin=request.user).delete()
+
+        return HttpResponse(status=204)
+
+
 @api_view(["POST"])
 def new_page(request):
     name = request.POST.get("name", "")[:32].strip()
+
     if not name:
         return JsonResponse({"success": False})
     elif any(c not in UOC for c in name):

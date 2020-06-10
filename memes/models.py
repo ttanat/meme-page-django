@@ -9,6 +9,7 @@ import os, ffmpeg
 # from django.core.files import File
 from django.core.files.base import ContentFile
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 def set_uuid():
@@ -309,15 +310,19 @@ class SubscribeRequest(models.Model):
         return f"{self.user} wants to join {self.page}"
 
 
+def get_invite_link():
+    return token_urlsafe(5)
+
+
 class InviteLink(models.Model):
-    """ Let page admins create links to join their page """
-    url = models.CharField(max_length=11, default=set_uuid)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    """ Let page admins create links to join their private page """
+    uuid = models.CharField(max_length=7, default=get_invite_link)
     page = models.ForeignKey(Page, on_delete=models.CASCADE)
+    uses = models.PositiveSmallIntegerField(default=1, validators=[MaxValueValidator(100), MinValueValidator(1)])
     timestamp = models.DateTimeField(auto_now=False, default=timezone.now)
 
     def __str__(self):
-        return f"{self.user} invited to join {self.page}"
+        return f"Invite link for {self.page}"
 
 
 class ModeratorInvite(models.Model):
