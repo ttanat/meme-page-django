@@ -150,7 +150,7 @@ def follow_user(sender, instance, action, **kwargs):
         for pk in kwargs["pk_set"]:
             followed_user = User.objects.only("num_followers").get(id=pk)
             followed_user.num_followers = F("num_followers") + 1
-            followed_user.save(update_fields="num_followers")
+            followed_user.save(update_fields=["num_followers"])
 
             Notification.objects.create(
                 actor=instance,
@@ -170,7 +170,7 @@ def follow_user(sender, instance, action, **kwargs):
         for pk in kwargs["pk_set"]:
             unfollowed_user = User.objects.only("num_followers").get(id=pk)
             unfollowed_user.num_followers = F("num_followers") - 1
-            unfollowed_user.save(update_fields="num_followers")
+            unfollowed_user.save(update_fields=["num_followers"])
 
             Notification.objects.filter(
                 actor=instance,
