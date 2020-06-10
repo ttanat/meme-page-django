@@ -32,7 +32,7 @@ def page(request, name):
 
         # Check if user has requested to subscribe to page
         if page.private and not response["is_subscribed"]:
-            response["sub_req_exists"] = SubscribeRequest.objects.filter(user=request.user, page=page).exists()
+            response["is_requested"] = SubscribeRequest.objects.filter(user=request.user, page=page).exists()
 
     # Prevent loading memes if page is private and user is not subscribed or page admin
     response["show"] = not page.private or response.get("is_subscribed") or page.admin_id == request.user.id
@@ -59,6 +59,8 @@ def subscribe(request, name):
                 obj, created = SubscribeRequest.objects.get_or_create(user=request.user, page=page_to_sub)
                 if not created:
                     obj.delete()
+
+                return JsonResponse({"requested": created})
             else:
                 page_to_sub.subscribers.add(request.user)    # Subscribe
 
@@ -67,7 +69,6 @@ def subscribe(request, name):
     return HttpResponseBadRequest()
 
 
-# name only used in GET
 @api_view(("GET", "PUT", "DELETE"))
 def subscribe_request(request, name):
     """ Handle subscribe requests for private pages """
