@@ -4,17 +4,18 @@ from django.db import IntegrityError
 from django.db.models import F, Q
 from django.utils import timezone
 # from django.views.decorators.cache import cache_page
-from django.core.paginator import Paginator
 
-from .models import *
+from .models import Page, Meme, Comment, Like, Category, Tag, User
 from .utils import UOC, SFT, CATEGORIES
-from datetime import timedelta
-from random import randint
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-import re
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from datetime import timedelta
+from random import randint
+import re
 
 
 @api_view(["GET"])
@@ -27,51 +28,6 @@ def user_session(request):
         "image": request.build_absolute_uri(user.image.url) if user.image else None,
         "moderating": Page.objects.filter(Q(admin=user)|Q(moderators=user)).annotate(dname=F("display_name")).values("name", "dname", "private"),
         "subscriptions": user.subscriptions.annotate(dname=F("display_name")).values("name", "dname", "private")
-    })
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def nav_notifications(request):
-    notifs = Notification.objects.filter(recipient=request.user, seen=False)
-    to_send = notifs[:5]
-
-    # Must force evaluation of queryset before updating
-    response = {
-        "count": notifs.count(),
-        "list": [n for n in to_send.values("link", "image", "message")]
-    }
-
-    for n in to_send:
-        n.seen = True
-
-    Notification.objects.bulk_update(to_send, ["seen"])
-
-    return Response(response)
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def notifications(request):
-    notifs = Notification.objects.filter(recipient=request.user).order_by("-timestamp")
-
-    p = Paginator(notifs, 20)
-    if "page" not in request.GET:
-        return HttpResponseBadRequest()
-    page_num = request.GET["page"]
-
-    current_page = p.get_page(page_num)
-    objs = current_page.object_list
-    to_send = [n for n in objs.values("link", "seen", "message", "timestamp")]
-
-    for obj in objs:
-        obj.seen = True
-
-    Notification.objects.bulk_update(objs, ["seen"])
-
-    return Response({
-        "next": current_page.next_page_number() if current_page.has_next() else None,
-        "results": to_send
     })
 
 
