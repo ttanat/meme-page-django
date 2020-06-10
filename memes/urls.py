@@ -3,10 +3,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from . import views
-from .api import api_notifications, api_profile, api_page, api_settings
+from .api import api_auth, api_notifications, api_profile, api_page, api_settings
 
 urlpatterns = [
-    path("api/auth/user/", views.user_session, name="user_session"),
+    # Authentication
+    path("api/auth/user/", api_auth.user_session, name="user_session"),
+    path("api/register", api_auth.register, name="register"),
+    # path("logout", api_auth.logout_view, name="logout"),
 
     # Notifications
     path("api/notifications/nav", api_notifications.nav_notifications, name="nav_notifications"),
@@ -21,10 +24,11 @@ urlpatterns = [
     path("api/comment/<str:action>", views.comment, name="comment"),
     path("api/reply", views.reply, name="reply"),
     path("api/upload", views.upload, name="upload"),
-    
+
     # Profile
     path("api/profile", api_profile.profile),
     path("api/user/<str:username>", api_profile.user_page),
+
     # Follow/unfollow user
     path("api/follow/<str:username>", views.follow, name="follow"),
     # Update profile bio or page description
@@ -36,9 +40,6 @@ urlpatterns = [
     path("api/subscribe_request/<str:name>", api_page.HandleSubscribeRequest.as_view(), name="subscribe_request"),
     path("api/invite/<str:identifier>", api_page.HandleInviteLink.as_view(), name="invite"),
     path("api/new_page", api_page.new_page, name="new_page"),
-
-    path("api/register", views.register, name="register"),
-    # path("logout", views.logout_view, name="logout"),
 
     # Settings
     path("api/settings", api_settings.user_settings, name="settings"),
