@@ -13,7 +13,10 @@ from rest_framework.permissions import IsAuthenticated
 
 @api_view(["GET"])
 def page(request, name):
-    page = get_object_or_404(Page.objects.annotate(adm=F("admin__username")), name__iexact=name)
+    page = get_object_or_404(
+        Page.objects.annotate(adm=F("admin__username")).defer("created", "nsfw"),
+        name__iexact=name
+    )
 
     response = {
         "page": {
@@ -37,7 +40,7 @@ def page(request, name):
         if page.private and not response["is_subscribed"]:
             response["is_requested"] = SubscribeRequest.objects.filter(user=request.user, page=page).exists()
 
-    # Prevent loading memes if page is private and user is not subscribed or page admin
+    # Prevent loading memes if page is private and user is not subscribed and user is not page admin
     response["show"] = not page.private or response.get("is_subscribed") or page.admin_id == request.user.id
 
     if response["show"]:
@@ -50,27 +53,28 @@ def page(request, name):
 @permission_classes([IsAuthenticated])
 def subscribe(request, name):
     page_to_sub = get_object_or_404(Page.objects.only("id", "admin_id", "private"), name=name)
+
+    # Admins cannot subscribe to their own page
+    if page_to_sub.admin_id == request.user.id:
+        return HttpResponseBadRequest()
+
     is_subscribed = page_to_sub.subscribers.filter(id=request.user.id).exists()
 
     if is_subscribed:
         page_to_sub.subscribers.remove(request.user)    # Unsubscribe
-        return JsonResponse({"subscribed": not is_subscribed})
     else:
-        if page_to_sub.admin_id != request.user.id:
-            # If subscribing to a private page
-            if page_to_sub.private:
-                # Send a request to subscribe
-                obj, created = SubscribeRequest.objects.get_or_create(user=request.user, page=page_to_sub)
-                if not created:
-                    obj.delete()
+        # If subscribing to a private page
+        if page_to_sub.private:
+            # Send a request to subscribe
+            obj, created = SubscribeRequest.objects.get_or_create(user=request.user, page=page_to_sub)
+            if not created:
+                obj.delete()
 
-                return JsonResponse({"requested": created})
-            else:
-                page_to_sub.subscribers.add(request.user)    # Subscribe
+            return JsonResponse({"requested": created})
+        else:
+            page_to_sub.subscribers.add(request.user)    # Subscribe
 
-            return JsonResponse({"subscribed": not is_subscribed})
-
-    return HttpResponseBadRequest()
+    return JsonResponse({"subscribed": not is_subscribed})
 
 
 class HandleSubscribeRequest(APIView):
@@ -131,8 +135,8 @@ class HandleSubscribeRequest(APIView):
         return HttpResponse(status=204)
 
 
-class HandleInviteLink(APIView):
-    """ Handle invite links for private pages """
+class HandleInviteLinkAdmin(APIView):
+    """ Handle invite links for private pages for admin """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, identifier):
@@ -159,39 +163,68 @@ class HandleInviteLink(APIView):
 
         return Response(InviteLink.objects.filter(page=page).values("uuid", "uses"))
 
-    def put(self, request, identifier):
-        """ identifier is uuid of link to use to add user """
+    def delete(self, request, identifier):
+        """ identifier is uuid of link to delete """
 
-        link = InviteLink.objects.select_related("page").only("id", "page__id", "page__admin_id", "uses").get(uuid=identifier)
+        # Only admin can delete
+        InviteLink.objects.filter(uuid=identifier, page__admin=request.user).delete()
 
-        # Don't subscribe admin to their own page
-        if request.user.id == link.page.admin_id:
-            return HttpResponseBadRequest()
+        return HttpResponse(status=204)
+
+
+class HandleInviteLinkUser(APIView):
+    """ Handle invite links for private pages for users """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, uuid):
+        """ Get page details when user goes to invite link """
+
+        with transaction.atomic():
+            if not InviteLink.objects.filter(uuid=uuid).exists():
+                return JsonResponse({"valid": False})
+            else:
+                link = InviteLink.objects.select_related("page").only("uses", "page__name", "page__image").get(uuid=uuid)
+
+            if link.uses < 1:
+                return JsonResponse({"valid": False})
+            else:
+                response = {"valid": True, "name": link.page.name}
+
+                if link.page.image:
+                    response["image"] = request.build_absolute_uri(link.page.image.url)
+
+            return JsonResponse(response)
+
+    def put(self, request, uuid):
+        """ uuid of link to use to add user """
+
+        link = InviteLink.objects.select_related("page").only("id", "page__id", "page__name", "page__admin_id", "uses").get(uuid=uuid)
+
+        # Don't subscribe admin to their own page and don't let a subscriber use a link
+        if request.user.id == link.page.admin_id or link.page.subscribers.filter(id=request.user.id).exists():
+            return JsonResponse({"name": link.page.name})
 
         with transaction.atomic():
             if link.uses < 1:
                 # Delete if no uses left
                 link.delete()
+                return HttpResponseBadRequest("Link is no longer valid")
             else:
                 # Subscribe user to page
-                link.page.add(request.user)
+                link.page.subscribers.add(request.user)
                 if link.uses == 1:
                     # Delete if no uses left
                     link.delete()
+                    return HttpResponseBadRequest("Link is no longer valid")
                 else:
                     link.uses = F("uses") - 1
                     link.save(update_fields=["uses"])
                     # Delete subscribe request for user on this page if it exists
                     SubscribeRequest.objects.filter(user=request.user, page=link.page).delete()
 
-        return HttpResponse()
+                    return JsonResponse({"name": link.page.name})
 
-    def delete(self, request, identifier):
-        """ identifier is uuid of link to delete """
-
-        InviteLink.objects.filter(uuid=identifier, page__admin=request.user).delete()
-
-        return HttpResponse(status=204)
+        return HttpResponseBadRequest()
 
 
 @api_view(["POST"])
