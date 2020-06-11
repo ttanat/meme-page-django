@@ -79,6 +79,8 @@ class Meme(models.Model):
     num_comments = models.PositiveIntegerField(default=0)
     nsfw = models.BooleanField(default=False)
     category = models.ForeignKey("Category", on_delete=models.SET_NULL, null=True, blank=True)
+    # tags = models.ManyToManyField("Tag", related_name="memes")
+    # tags_list = models.ArrayField(ArrayField(models.CharField(max_length=64, blank=False), blank=True))
     ip_address = models.GenericIPAddressField(null=True)
     is_seen = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="seen")
     hidden = models.BooleanField(default=False)
@@ -223,6 +225,7 @@ class Like(models.Model):
     liked_on = models.DateTimeField(auto_now=False, default=timezone.now)
 
     class Meta:
+        # abstract = True
         constraints = [
             models.UniqueConstraint(fields=["user", "meme", "comment"], name="unique_vote"),
             models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_vote") # single_point_vote
@@ -230,6 +233,32 @@ class Like(models.Model):
 
     def __str__(self):
         return f"{self.user.username} {'meme' if self.meme else 'comment'} {'' if self.point == 1 else 'dis'}like"
+
+
+# class MemeLike(Like):
+#     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="likes")
+
+#     class Meta:
+#         constraints = [
+#             models.UniqueConstraint(fields=["user", "meme"], name="unique_meme_vote"),
+#             models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_point_vote")
+#         ]
+
+#     def __str__(self):
+#         return f"{self.user.username} meme {'' if self.point == 1 else 'dis'}like"
+
+
+# class CommentLike(Like):
+#     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=False, blank=False, related_name="c_likes")
+
+#     class Meta:
+#         constraints = [
+#             models.UniqueConstraint(fields=["user", "comment"], name="unique_comment_vote"),
+#             models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_point_vote")
+#         ]
+
+#     def __str__(self):
+#         return f"{self.user.username} comment {'' if self.point == 1 else 'dis'}like"
 
 
 def page_directory_path(instance, filename):
@@ -256,8 +285,8 @@ class Page(models.Model):
     def __str__(self):
         return f"{self.name}"
 
-    def get_display_name(self):
-        return f"{self.display_name}" if self.display_name else f"{self.name}"
+    # def get_display_name(self):
+    #     return f"{self.display_name}" if self.display_name else f"{self.name}"
 
     def resize_img(self):
         img = Image.open(self.image.path)
