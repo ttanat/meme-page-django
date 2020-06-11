@@ -81,8 +81,7 @@ class ProfileLikesViewSet(ProfileMemesViewSet):
     serializer_class = UserMemesSerializer
 
     def get_queryset(self):
-        # return Meme.objects.filter(likes__user=self.request.user, likes__point=1).order_by("-likes__id")
-        return self.request.user.meme_set.filter(likes__point=1).order_by("-likes__id")
+        return Meme.objects.filter(likes__user=self.request.user, likes__point=1).order_by("-likes__id")
 
 
 class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
