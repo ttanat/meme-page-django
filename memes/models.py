@@ -83,7 +83,10 @@ class Meme(models.Model):
     # tags_list = models.ArrayField(ArrayField(models.CharField(max_length=64, blank=False), blank=True))
     ip_address = models.GenericIPAddressField(null=True)
     is_seen = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="seen")
+    # ^ Replace with views
     hidden = models.BooleanField(default=False)
+    # views = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="viewed")
+    # num_views = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-id"]
@@ -164,6 +167,12 @@ class Meme(models.Model):
         super().delete(*args, **kwargs)
 
 
+# class History(models.Model):
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     meme = models.ForeignKey(Meme, on_delete=models.CASCADE)
+#     viewed_on = models.DateTimeField(auto_now=False, default=timezone.now)
+
+
 class Tag(models.Model):
     name = models.CharField(max_length=64, unique=True, blank=False)
     meme = models.ManyToManyField(Meme, related_name="tags")
@@ -220,6 +229,7 @@ class Comment(models.Model):
 class Like(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     point = models.SmallIntegerField()
+    # ^ Change to IntegerField
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=True, blank=True, related_name="likes")
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True, related_name="comment_likes")
     liked_on = models.DateTimeField(auto_now=False, default=timezone.now)

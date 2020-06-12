@@ -34,7 +34,8 @@ def meme_view(request, uuid):
             "num_comments",
             "user__image",
             "page__private",
-            "page__admin_id"
+            "page__admin_id",
+            # "num_views"
         ),
         uuid=uuid,
         hidden=False
@@ -46,6 +47,11 @@ def meme_view(request, uuid):
         if (not request.user.is_authenticated or
                 (meme.page.admin_id != request.user.id and not request.user.subscriptions.filter(id=meme.page_id).exists())):
             return HttpResponse(status=403)
+
+    # if request.user.is_authenticated:
+    #     meme.views.add(request.user)
+    # meme.num_views = F("num_views") + 1
+    # meme.save(update_fields=["num_views"])
 
     return Response({
         "username": meme.user.username,
