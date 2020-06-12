@@ -103,7 +103,7 @@ class PageSettings(APIView):
 
         return Response({
             "name": page.name,
-            "dname": page.display_name,
+            "display_name": page.display_name,
             "image": request.build_absolute_uri(page.image.url) if page.image else None,
             "cover": request.build_absolute_uri(page.cover.url) if page.cover else None,
             "description": page.description,
@@ -112,6 +112,9 @@ class PageSettings(APIView):
             "mods": User.objects.filter(moderating=page).values_list("username", flat=True),
             # "pending": page moderators pending
         })
+
+    def get_valid_update_fields(self):
+        return ("display_name", "description", "private", "permissions")
 
     def post(self, request, name):
         if request.FILES:
@@ -130,11 +133,26 @@ class PageSettings(APIView):
             else:
                 return HttpResponseBadRequest()
         else:
-            page = self.get_object(request.user, name, ("display_name", "description", "private", "permissions"))
-            page.display_name = request.POST.get("dname", "")[:32].strip()
-            page.description = request.POST.get("description", "")[:150].strip()
-            page.private = request.POST.get("private") == "true"
-            page.permissions = request.POST.get("permissions") != "false"
+            update_fields = request.POST.getlist("update_fields")
+
+            if (not update_fields or 
+                any(field not in self.get_valid_update_fields() for field in update_fields)):
+                return HttpResponseBadRequest()
+
+            page = self.get_object(request.user, name, update_fields)
+
+            if "display_name" in update_fields:
+                page.display_name = request.POST["display_name"][:32].strip()
+
+            if "description" in update_fields:
+                page.description = request.POST["description"][:150].strip()
+
+            if "private" in update_fields:
+                page.private = request.POST["private"] == "true"
+
+            if "permissions" in update_fields:
+                page.permissions = request.POST["permissions"] != "false"
+
             page.save()
 
         return HttpResponse()
