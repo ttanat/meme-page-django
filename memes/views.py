@@ -20,11 +20,31 @@ import re
 def meme_view(request, uuid):
     """ Page for individual meme with comments """
 
-    meme = get_object_or_404(Meme.objects.select_related("user", "page"), uuid=uuid, hidden=False)
+    meme = get_object_or_404(
+        Meme.objects.select_related("user", "page").only(
+            "user__username",
+            "page__name",
+            "page__display_name",
+            "uuid",
+            "caption",
+            "content_type",
+            "file",
+            # "thumbnail",
+            "points",
+            "num_comments",
+            "user__image",
+            "page__private",
+            "page__admin_id"
+        ),
+        uuid=uuid,
+        hidden=False
+    )
+    # page_id automatically selected
 
+    # Only show memes from private pages to admin and subscribers
     if meme.page and meme.page.private:
         if (not request.user.is_authenticated or
-                (not request.user.subscriptions.filter(id=meme.page_id).exists() and meme.page.admin_id != request.user.id)):
+                (meme.page.admin_id != request.user.id and not request.user.subscriptions.filter(id=meme.page_id).exists())):
             return HttpResponse(status=403)
 
     return Response({
