@@ -20,7 +20,7 @@ import re
 def meme_view(request, uuid):
     """ Page for individual meme with comments """
 
-    meme = get_object_or_404(Meme.objects.select_related("user", "page"), uuid=uuid)
+    meme = get_object_or_404(Meme.objects.select_related("user", "page"), uuid=uuid, hidden=False)
 
     if meme.page and meme.page.private:
         if (not request.user.is_authenticated or
@@ -45,7 +45,7 @@ def meme_view(request, uuid):
 @api_view(["GET"])
 def full_res(request, obj, uuid):
     if obj == "m":
-        meme = get_object_or_404(Meme.objects.only("file", "content_type"), uuid=uuid)
+        meme = get_object_or_404(Meme.objects.only("file", "content_type"), uuid=uuid, hidden=False)
         return JsonResponse({
             "url": request.build_absolute_uri(meme.file.url),
             "isVid": meme.content_type.startswith("video/")
