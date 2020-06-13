@@ -21,7 +21,7 @@ def user_session(request):
         "username": user.username,
         "image": request.build_absolute_uri(user.image.url) if user.image else None,
         "moderating": Page.objects.filter(Q(admin=user)|Q(moderators=user)).annotate(dname=F("display_name")).values("name", "dname", "private"),
-        "subscriptions": user.subscriptions.annotate(dname=F("display_name")).values("name", "dname", "private")
+        "subscriptions": user.subscriptions.annotate(dname=F("display_name")).values("name", "dname", "private", "permissions")
     })
 
 
