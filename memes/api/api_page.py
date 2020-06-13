@@ -179,24 +179,20 @@ class HandleInviteLinkUser(APIView):
     def get(self, request, uuid):
         """ Get page details when user goes to invite link """
 
-        with transaction.atomic():
-            if not InviteLink.objects.filter(uuid=uuid).exists():
-                return JsonResponse({"valid": False})
-            else:
-                link = InviteLink.objects.select_related("page").only("uses", "page__name", "page__display_name", "page__image").get(uuid=uuid)
+        if not InviteLink.objects.filter(uuid=uuid).exists():
+            return JsonResponse({"valid": False})
+        else:
+            link = InviteLink.objects.select_related("page").only("page__name", "page__display_name", "page__image").get(uuid=uuid)
 
-            if link.uses < 1:
-                return JsonResponse({"valid": False})
-            else:
-                response = {"valid": True, "name": link.page.name}
+        response = {"valid": True, "name": link.page.name}
 
-                if link.page.display_name:
-                    response["dname"] = link.page.display_name
+        if link.page.display_name:
+            response["dname"] = link.page.display_name
 
-                if link.page.image:
-                    response["image"] = request.build_absolute_uri(link.page.image.url)
+        if link.page.image:
+            response["image"] = request.build_absolute_uri(link.page.image.url)
 
-            return JsonResponse(response)
+        return JsonResponse(response)
 
     def put(self, request, uuid):
         """ uuid of link to use to add user """
