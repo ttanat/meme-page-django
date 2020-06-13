@@ -216,16 +216,16 @@ class HandleInviteLinkUser(APIView):
                 # Subscribe user to page
                 link.page.subscribers.add(request.user)
                 if link.uses == 1:
-                    # Delete if no uses left
+                    # Delete now because no uses left
                     link.delete()
-                    return HttpResponseBadRequest("Link is no longer valid")
                 else:
                     link.uses = F("uses") - 1
                     link.save(update_fields=["uses"])
-                    # Delete subscribe request for user on this page if it exists
-                    SubscribeRequest.objects.filter(user=request.user, page=link.page).delete()
 
-                    return JsonResponse({"name": link.page.name})
+                # Delete subscribe request for user on this page if it exists
+                SubscribeRequest.objects.filter(user=request.user, page=link.page).delete()
+
+                return JsonResponse({"name": link.page.name})
 
         return HttpResponseBadRequest()
 
