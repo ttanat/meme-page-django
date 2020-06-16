@@ -262,6 +262,11 @@ class HandleModeratorsAdmin(APIView):
             return HttpResponseBadRequest()
 
         page = self.get_page(request.user, name)
+
+        current_pending_count = ModeratorInvite.objects.filter(page=page).count()
+        if current_pending_count + len(usernames) > 25:
+            return HttpResponseBadRequest("Can only invite 25 users at a time")
+
         ModeratorInvite.objects.bulk_create(
             [ModeratorInvite(invitee__username=username, page=page) for username in usernames],
             ignore_conflicts=True
@@ -284,12 +289,12 @@ class HandleModeratorsAdmin(APIView):
 
     def delete(self, request, name):
         """ For admin deleting pending moderation invites to users """
-        if "users" not in request.GET:
+        if "usernames" not in request.GET:
             return HttpResponseBadRequest()
 
-        users = request.GET["users"]
+        usernames = request.GET["usernames"]
         page = self.get_page(request.user, name)
-        ModeratorInvite.objects.filter(page=page, invitee__username__in=users).delete()
+        ModeratorInvite.objects.filter(page=page, invitee__username__in=usernames).delete()
 
         return HttpResponse(status=204)
 
