@@ -4,6 +4,7 @@ from django.db.models import F
 from django.db import transaction
 
 from memes.models import Page, SubscribeRequest, User, InviteLink
+from memes.utils import UOC
 
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
@@ -244,7 +245,38 @@ def new_page(request):
     private = request.POST.get("private") == "true"
     perm = request.POST.get("permissions") != "false"
 
-    Page.objects.create(admin=request.user, name=name, display_name=dname, description="", private=private, permissions=perm)
-    # Page.objects.create(admin=request.user, name=name, display_name=dname, private=private, permissions=perm)
+    Page.objects.create(admin=request.user, name=name, display_name=dname, private=private, permissions=perm)
 
     return JsonResponse({"success": True, "name": name})
+
+
+class HandleModerators(APIView):
+    """ Add, remove, or invite moderators """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, name):
+        """ name is page name """
+
+        return User.objects.filter(moderating__name=name).only("username", "image").order_by("date_joined")
+
+    def put(self, request, name):
+        """ name is page name """
+
+        if "username" not in request.GET:
+            return HttpResponseBadRequest()
+
+        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
+        page.moderators.add(User.objects.filter(username=request.GET["username"]))
+
+        return HttpResponse()
+
+    def delete(self, request, name):
+        """ name is page name """
+
+        if "username" not in request.GET:
+            return HttpResponseBadRequest()
+
+        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
+        page.moderators.remove(User.objects.filter(username=request.GET["username"]))
+
+        return HttpResponse(status=204)
