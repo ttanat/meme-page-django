@@ -43,6 +43,9 @@ urlpatterns = [
     path("api/invite/<str:uuid>", api_page.HandleInviteLinkUser.as_view(), name="invite"),
     # Create new page
     path("api/new_page", api_page.new_page, name="new_page"),
+    # Moderators
+    path("api/moderators/admin/<str:name>", api_page.HandleModeratorsAdmin.as_view(), name="admin_moderators"),
+    path("api/moderators/<str:name>", api_page.HandleModerators.as_view(), name="moderators"),
 
     # Settings
     path("api/settings", api_settings.user_settings, name="settings"),
