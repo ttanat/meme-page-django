@@ -323,12 +323,13 @@ def delete(request, model, identifier=None):
     # Use get instead of filter so that files are deleted too
     if model == "meme":
         Meme.objects.get(user=request.user, uuid=identifier).delete()
-    elif model == "page":
-        Page.objects.get(admin=request.user, name=identifier).delete()
-    elif model == "account":
+    else:
         password = request.POST.get("password")
         if password and request.user.check_password(password):
-            request.user.delete()
+            if model == "page":
+                Page.objects.get(admin=request.user, name=identifier).delete()
+            elif model == "user":
+                request.user.delete()
         else:
             return HttpResponseBadRequest("Password incorrect")
 
