@@ -167,7 +167,7 @@ class Meme(models.Model):
         super().delete(*args, **kwargs)
 
 
-# class History(models.Model):
+# class View(models.Model):
 #     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 #     meme = models.ForeignKey(Meme, on_delete=models.CASCADE)
 #     viewed_on = models.DateTimeField(auto_now=False, default=timezone.now)
@@ -278,6 +278,7 @@ def page_directory_path(instance, filename):
 class Page(models.Model):
     admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating")
+    # moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating", through="Moderator")
     subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="subscriptions")
     created = models.DateTimeField(auto_now=False, default=timezone.now)
     name = models.CharField(max_length=32, blank=False, unique=True)
@@ -285,10 +286,13 @@ class Page(models.Model):
     image = models.ImageField(upload_to=page_directory_path, null=True, blank=True)
     cover = models.ImageField(upload_to=page_directory_path, null=True, blank=True)
     description = models.CharField(max_length=150, blank=True, default="")
+    # description = models.CharField(max_length=200, blank=True, default="")
+    # description2 = models.CharField(max_length=300, blank=True, default="")
     nsfw = models.BooleanField(default=False)
     private = models.BooleanField(default=False)
     # True if subscribers can post / False if only admin can post
     permissions = models.BooleanField(default=True)
+    # num_mods = models.PositiveSmallIntegerField(default=0)
     num_subscribers = models.PositiveIntegerField(default=0)
     num_posts = models.PositiveIntegerField(default=0)
 
@@ -314,6 +318,12 @@ class Page(models.Model):
         self.image.delete()
         self.cover.delete()
         super().delete(*args, **kwargs)
+
+
+# class Moderator(models.Model):
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     page = models.ForeignKey(Page, on_delete=models.CASCADE)
+#     date_joined = models.DateTimeField(auto_now=False, default=timezone.now)
 
 
 class Notification(models.Model):
