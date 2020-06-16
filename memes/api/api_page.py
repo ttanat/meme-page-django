@@ -248,6 +248,52 @@ def new_page(request):
     return JsonResponse({"success": True, "name": name})
 
 
+class HandleModeratorsAdmin(APIView):
+    """ Handle moderators for admin only """
+    permission_classes = [IsAuthenticated]
+
+    def get_page(self, user, name):
+        return get_object_or_404(Page.objects.only("id"), admin=user, name=name)
+
+    def post(self, request, name):
+        """ Invite users in new_mods to moderate for page"""
+        usernames = request.POST.getlist("new_mods")
+        if not usernames:
+            return HttpResponseBadRequest()
+
+        page = self.get_page(request.user, name)
+        ModeratorInvite.objects.bulk_create(
+            [ModeratorInvite(invitee__username=username, page=page) for username in usernames],
+            ignore_conflicts=True
+        )
+
+        return HttpResponse()
+
+    def get(self, request, name):
+        """ For admin seeing pending moderation invites to users """
+        page = self.get_page(request.user, name)
+
+        invites = ModeratorInvite.objects.filter(page=page, invitee__username__in=usernames) \
+                                         .select_related("invitee") \
+                                         .only("invitee__username", "invitee__image")
+
+        return Response([{
+            "username": invite.invitee.username,
+            "image": request.build_absolute_uri(invite.invitee.image.url) if invite.invitee.image else None
+        } for invite in invites])
+
+    def delete(self, request, name):
+        """ For admin deleting pending moderation invites to users """
+        if "users" not in request.GET:
+            return HttpResponseBadRequest()
+
+        users = request.GET["users"]
+        page = self.get_page(request.user, name)
+        ModeratorInvite.objects.filter(page=page, invitee__username__in=users).delete()
+
+        return HttpResponse(status=204)
+
+
 class HandleModerators(APIView):
     """ Add, remove, or invite moderators """
     permission_classes = [IsAuthenticated]
