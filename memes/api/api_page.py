@@ -137,17 +137,26 @@ class HandleSubscribeRequest(APIView):
 
 
 class HandleInviteLinkAdmin(APIView):
-    """ Handle invite links for private pages for admin """
+    """ Handle invite links for private pages for admin AND moderators """
     permission_classes = [IsAuthenticated]
+
+    def get_query_expression(self, user):
+        """ For Page object, check that user is admin or moderator """
+        q = Q()
+        q |= Q(admin=user)
+        q |= Q(moderators=user)
+
+        return q
+
+    def get_page(self, user, identifier):
+        return get_object_or_404(Page.objects.only("id"), self.get_query_expression(user), name=identifier, private=True)
 
     def post(self, request, identifier):
         """ identifier is name of page to create link for """
-
         if "uses" not in request.POST:
             return HttpResponseBadRequest()
 
-        # Only page admin can create
-        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=identifier, private=True)
+        page = self.get_page(request.user, identifier)
 
         if InviteLink.objects.filter(page=page).count() < 100:
             link = InviteLink.objects.create(page=page, uses=request.POST["uses"])
@@ -158,17 +167,13 @@ class HandleInviteLinkAdmin(APIView):
 
     def get(self, request, identifier):
         """ Get invite links for page """
-
-        # Page admin access only
-        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=identifier, private=True)
+        page = self.get_page(request.user, identifier)
 
         return Response(InviteLink.objects.filter(page=page).values("uuid", "uses"))
 
     def delete(self, request, identifier):
         """ identifier is uuid of link to delete """
-
-        # Only admin can delete
-        InviteLink.objects.filter(uuid=identifier, page__admin=request.user).delete()
+        InviteLink.objects.filter(uuid=identifier).filter(self.get_query_expression(request.user)).delete()
 
         return HttpResponse(status=204)
 
