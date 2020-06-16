@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import F
 from django.db import transaction
 
-from memes.models import Page, SubscribeRequest, User, InviteLink
+from memes.models import Page, SubscribeRequest, User, InviteLink, ModeratorInvite
 from memes.utils import UOC
 
 from rest_framework.views import APIView
@@ -254,9 +254,23 @@ class HandleModerators(APIView):
 
     def get(self, request, name):
         """ name is page name """
-        return Response(User.objects.filter(moderating__name=name).only("username", "image"))#.order_by("date_joined")
+        users = User.objects.filter(moderating__name=name).only("username", "image").order_by("id") # date_joined
+
+        # Last ID of user sent (prevents showing duplicates)
+        if "lid" in request.GET:
+            users = users.filter(id__gt=request.GET["lid"])
+
+        # Get first 25 users
+        results = users[:25]
+
+        return Response({
+            # If there are more users, get largest ID of results
+            "lid": results[25]["id"] if users.count() > 25 else None,
+            "results": results
+        })
 
     def put(self, request, name):
+        """ For users accepting invite to moderate for a page """
         """ name is page name """
         if "username" not in request.GET:
             return HttpResponseBadRequest()
@@ -267,6 +281,7 @@ class HandleModerators(APIView):
         return HttpResponse()
 
     def delete(self, request, name):
+        """ For users deleting invite to moderate for a page """
         """ name is page name """
         if "username" not in request.GET:
             return HttpResponseBadRequest()
