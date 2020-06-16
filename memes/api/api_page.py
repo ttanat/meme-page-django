@@ -87,7 +87,6 @@ class HandleSubscribeRequest(APIView):
 
     def get(self, request, name):
         """ ID of request is sent too """
-
         reqs = SubscribeRequest.objects.annotate(username=F("user__username")) \
                                        .filter(page=self.get_page(request.user, name)) \
                                        .values("id", "username", "timestamp") \
@@ -108,18 +107,14 @@ class HandleSubscribeRequest(APIView):
 
     def put(self, request, name):
         """ Accept request and delete object """
-
         if "id" not in request.GET:
             return HttpResponseBadRequest()
 
         sub_req = get_object_or_404(SubscribeRequest.objects.only("user_id"), id=request.GET["id"])
-
         # Get user to add to subscribers
         user_to_add = User.objects.only("id").get(id=sub_req.user_id)
-
         # Add user to subscribers of page
         self.get_page(request.user, name).subscribers.add(user_to_add)
-
         # Delete the request
         sub_req.delete()
 
@@ -184,7 +179,6 @@ class HandleInviteLinkUser(APIView):
 
     def get(self, request, uuid):
         """ Get page details when user goes to invite link """
-
         if not InviteLink.objects.filter(uuid=uuid).exists():
             return JsonResponse({"valid": False})
         else:
@@ -202,7 +196,6 @@ class HandleInviteLinkUser(APIView):
 
     def put(self, request, uuid):
         """ uuid of link to use to add user """
-
         link = InviteLink.objects.select_related("page").only("id", "page__id", "page__name", "page__admin_id", "uses").get(uuid=uuid)
 
         # Don't subscribe admin to their own page and don't let a subscriber use a link
@@ -261,12 +254,10 @@ class HandleModerators(APIView):
 
     def get(self, request, name):
         """ name is page name """
-
-        return User.objects.filter(moderating__name=name).only("username", "image").order_by("date_joined")
+        return Response(User.objects.filter(moderating__name=name).only("username", "image"))#.order_by("date_joined")
 
     def put(self, request, name):
         """ name is page name """
-
         if "username" not in request.GET:
             return HttpResponseBadRequest()
 
@@ -277,7 +268,6 @@ class HandleModerators(APIView):
 
     def delete(self, request, name):
         """ name is page name """
-
         if "username" not in request.GET:
             return HttpResponseBadRequest()
 
