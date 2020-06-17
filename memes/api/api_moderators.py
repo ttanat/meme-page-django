@@ -21,14 +21,17 @@ def invite_moderators(request, name):
     if not usernames:
         return HttpResponseBadRequest()
 
-    page = get_object_or_404(Page.objects.only("id"), admin=user, name=name)
+    page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
+    # page = get_object_or_404(Page.objects.only("id", "num_mods"), admin=request.user, name=name)
 
-    current_pending_count = ModeratorInvite.objects.filter(page=page).count()
-    if current_pending_count + len(usernames) > 25:
-        return HttpResponseBadRequest("Can only invite 25 users at a time")
+    current_pending_count = ModeratorInvite.objects.filter(page=page).count() # + page.num_mods
+    if current_pending_count + len(usernames) > 50:
+        return HttpResponseBadRequest("Can only have 50 moderators")
+
+    users = User.objects.only("id").filter(username__in=usernames)
 
     ModeratorInvite.objects.bulk_create(
-        [ModeratorInvite(invitee__username=username, page=page) for username in usernames],
+        [ModeratorInvite(invitee=user, page=page) for user in users],
         ignore_conflicts=True
     )
 
@@ -43,16 +46,16 @@ class PendingModeratorsAdmin(APIView):
 
     def get(self, request, name):
         """ For admin seeing pending moderation invites to users """
-        page = self.get_page(request.user, name)
+        page = get_object_or_404(Page.objects.only("admin_id"), admin=request.user, name=name)
+
+        if request.user.id != page.admin_id:
+            return HttpResponseBadRequest()
 
         invites = ModeratorInvite.objects.filter(page=page) \
-                                         .select_related("invitee") \
-                                         .only("invitee__username", "invitee__image")
+                                         .annotate(username=F("invitee__username")) \
+                                         .values_list("username", flat=True)
 
-        return Response([{
-            "username": invite.invitee.username,
-            "image": request.build_absolute_uri(invite.invitee.image.url) if invite.invitee.image else None
-        } for invite in invites])
+        return Response(invites)
 
     def delete(self, request, name):
         """ For admin deleting pending moderation invites to users """
@@ -76,7 +79,10 @@ class CurrentModerators(APIView):
     def get(self, request, name):
         """ Get invites for user """
 
-        return Response(ModeratorInvite.objects.annotate(username=F("invitee__username")).values("username"))
+        # TODO: fix this
+        return Response(
+            Page.objects.filter(name=name).annotate(username=F("moderators__username")).values_list("username", flat=True)
+        )
 
 
     """ For page admin """
@@ -87,7 +93,10 @@ class CurrentModerators(APIView):
 
         usernames = request.GET["usernames"]
         page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
+        # page = get_object_or_404(Page.objects.only("id", "num_mods"), admin=request.user, name=name)
         page.moderators.remove(*User.objects.filter(username__in=usernames))
+        # page.num_mods = F("num_mods") - 1
+        # page.save(update_fields=["num_mods"])
 
         return HttpResponse(status=204)
 
@@ -130,7 +139,11 @@ class HandleModeratorInvite(APIView):
     def delete(self, request, name):
         """ For users deleting invite to moderate for a page """
 
+        # page = get_object_or_404(Page.objects.only("num_mods"), name=name)
         ModeratorInvite.objects.filter(invitee=request.user, page__name=name).delete()
+        # ModeratorInvite.objects.filter(invitee=request.user, page=page).delete()
+        # page.num_mods = F("num_mods") - 1
+        # page.save(update_fields=["num_mods"])
 
         return HttpResponse(status=204)
 
