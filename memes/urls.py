@@ -3,7 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from . import views
-from .api import api_auth, api_notifications, api_profile, api_page, api_settings
+from .api import api_auth, api_notifications, api_profile, api_page, api_moderators, api_settings
 
 urlpatterns = [
     # Authentication
@@ -44,8 +44,11 @@ urlpatterns = [
     # Create new page
     path("api/new_page", api_page.new_page, name="new_page"),
     # Moderators
-    path("api/moderators/admin/<str:name>", api_page.HandleModeratorsAdmin.as_view(), name="admin_moderators"),
-    path("api/moderators/<str:name>", api_page.HandleModerators.as_view(), name="moderators"),
+    path("api/mods/invite/<str:name>", api_moderators.invite_moderators, name="invite_moderators"),
+    path("api/mods/pending/<str:name>", api_moderators.PendingModeratorsAdmin.as_view(), name="pending_moderators"),
+    path("api/mods/current/<str:name>", api_moderators.CurrentModerators.as_view(), name="current_moderators"),
+    path("api/mods/handle_invite/<str:name>", api_moderators.HandleModeratorInvite.as_view(), name="handle_invite_moderators"),
+    path("api/mods/leave/<str:name>", api_moderators.stop_moderating, name="leave_moderators"),
 
     # Settings
     path("api/settings", api_settings.user_settings, name="settings"),

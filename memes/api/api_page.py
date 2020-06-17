@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import F
 from django.db import transaction
 
-from memes.models import Page, SubscribeRequest, User, InviteLink, ModeratorInvite
+from memes.models import Page, SubscribeRequest, User, InviteLink
 from memes.utils import UOC
 
 from rest_framework.views import APIView
@@ -246,98 +246,3 @@ def new_page(request):
     Page.objects.create(admin=request.user, name=name, display_name=dname, private=private, permissions=perm)
 
     return JsonResponse({"success": True, "name": name})
-
-
-class HandleModeratorsAdmin(APIView):
-    """ Handle moderators for admin only """
-    permission_classes = [IsAuthenticated]
-
-    def get_page(self, user, name):
-        return get_object_or_404(Page.objects.only("id"), admin=user, name=name)
-
-    def post(self, request, name):
-        """ Invite users in new_mods to moderate for page"""
-        usernames = request.POST.getlist("new_mods")
-        if not usernames:
-            return HttpResponseBadRequest()
-
-        page = self.get_page(request.user, name)
-
-        current_pending_count = ModeratorInvite.objects.filter(page=page).count()
-        if current_pending_count + len(usernames) > 25:
-            return HttpResponseBadRequest("Can only invite 25 users at a time")
-
-        ModeratorInvite.objects.bulk_create(
-            [ModeratorInvite(invitee__username=username, page=page) for username in usernames],
-            ignore_conflicts=True
-        )
-
-        return HttpResponse()
-
-    def get(self, request, name):
-        """ For admin seeing pending moderation invites to users """
-        page = self.get_page(request.user, name)
-
-        invites = ModeratorInvite.objects.filter(page=page, invitee__username__in=usernames) \
-                                         .select_related("invitee") \
-                                         .only("invitee__username", "invitee__image")
-
-        return Response([{
-            "username": invite.invitee.username,
-            "image": request.build_absolute_uri(invite.invitee.image.url) if invite.invitee.image else None
-        } for invite in invites])
-
-    def delete(self, request, name):
-        """ For admin deleting pending moderation invites to users """
-        if "usernames" not in request.GET:
-            return HttpResponseBadRequest()
-
-        usernames = request.GET["usernames"]
-        page = self.get_page(request.user, name)
-        ModeratorInvite.objects.filter(page=page, invitee__username__in=usernames).delete()
-
-        return HttpResponse(status=204)
-
-
-class HandleModerators(APIView):
-    """ Add, remove, or invite moderators """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, name):
-        """ name is page name """
-        users = User.objects.filter(moderating__name=name).only("username", "image").order_by("id") # date_joined
-
-        # Last ID of user sent (prevents showing duplicates)
-        if "lid" in request.GET:
-            users = users.filter(id__gt=request.GET["lid"])
-
-        # Get first 25 users
-        results = users[:25]
-
-        return Response({
-            # If there are more users, get largest ID of results
-            "lid": results[25]["id"] if users.count() > 25 else None,
-            "results": results
-        })
-
-    def put(self, request, name):
-        """ For users accepting invite to moderate for a page """
-        """ name is page name """
-        if "username" not in request.GET:
-            return HttpResponseBadRequest()
-
-        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
-        page.moderators.add(User.objects.filter(username=request.GET["username"]))
-
-        return HttpResponse()
-
-    def delete(self, request, name):
-        """ For users deleting invite to moderate for a page """
-        """ name is page name """
-        if "username" not in request.GET:
-            return HttpResponseBadRequest()
-
-        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
-        page.moderators.remove(User.objects.filter(username=request.GET["username"]))
-
-        return HttpResponse(status=204)
