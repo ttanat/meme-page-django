@@ -1,6 +1,6 @@
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
-from django.db.models import F
+from django.db.models import F, Q
 from django.db import transaction
 
 from memes.models import Page, SubscribeRequest, User, InviteLink
@@ -135,16 +135,8 @@ class HandleInviteLinkAdmin(APIView):
     """ Handle invite links for private pages for admin AND moderators """
     permission_classes = [IsAuthenticated]
 
-    def get_query_expression(self, user):
-        """ For Page object, check that user is admin or moderator """
-        q = Q()
-        q |= Q(admin=user)
-        q |= Q(moderators=user)
-
-        return q
-
     def get_page(self, user, identifier):
-        return get_object_or_404(Page.objects.only("id"), self.get_query_expression(user), name=identifier, private=True)
+        return get_object_or_404(Page.objects.only("id"), Q(admin=user)|Q(moderators=user), name=identifier, private=True)
 
     def post(self, request, identifier):
         """ identifier is name of page to create link for """
@@ -168,7 +160,7 @@ class HandleInviteLinkAdmin(APIView):
 
     def delete(self, request, identifier):
         """ identifier is uuid of link to delete """
-        InviteLink.objects.filter(uuid=identifier).filter(self.get_query_expression(request.user)).delete()
+        InviteLink.objects.filter(uuid=identifier).filter(Q(page__admin=request.user)|Q(page__moderators=request.user)).delete()
 
         return HttpResponse(status=204)
 
