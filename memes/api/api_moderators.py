@@ -17,73 +17,44 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 @permission_classes([IsAuthenticated])
 def invite_moderators(request, name):
     """ Invite users in new_mods to moderate for page"""
-    usernames = request.POST.getlist("new_mods")
+    usernames = request.POST.getlist("new_mods")[:50]
     if not usernames:
         return HttpResponseBadRequest()
 
     page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
     # page = get_object_or_404(Page.objects.only("id", "num_mods"), admin=request.user, name=name)
 
-    current_pending_count = ModeratorInvite.objects.filter(page=page).count() # + page.num_mods
+    current_pending_count = page.moderatorinvite_set.count() + page.moderators.count() # + page.num_mods
     if current_pending_count + len(usernames) > 50:
         return HttpResponseBadRequest("Can only have 50 moderators")
 
     users = User.objects.only("id").filter(username__in=usernames)
 
-    ModeratorInvite.objects.bulk_create(
-        [ModeratorInvite(invitee=user, page=page) for user in users],
-        ignore_conflicts=True
-    )
+    try:
+        new_pending = ModeratorInvite.objects.bulk_create([ModeratorInvite(invitee=user, page=page) for user in users])
+    except IntegrityError:
+        return HttpResponseBadRequest("Moderator(s) already exist")
 
-    return HttpResponse()
+    return Response(ModeratorInvite.objects.filter(invitee__in=users).values_list("invitee__username", flat=True))
 
 
 class PendingModeratorsAdmin(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_page(self, user, name):
-        return get_object_or_404(Page.objects.only("id"), admin=user, name=name)
-
-    def get(self, request, name):
-        """ For admin seeing pending moderation invites to users """
-        page = get_object_or_404(Page.objects.only("admin_id"), admin=request.user, name=name)
-
-        if request.user.id != page.admin_id:
-            return HttpResponseBadRequest()
-
-        invites = ModeratorInvite.objects.filter(page=page) \
-                                         .annotate(username=F("invitee__username")) \
-                                         .values_list("username", flat=True)
-
-        return Response(invites)
-
     def delete(self, request, name):
         """ For admin deleting pending moderation invites to users """
-        if "usernames" not in request.GET:
+        if "username" not in request.GET:
             return HttpResponseBadRequest()
 
-        usernames = request.GET["usernames"]
-        page = self.get_page(request.user, name)
+        usernames = request.GET.getlist("username")
+        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
         ModeratorInvite.objects.filter(page=page, invitee__username__in=usernames).delete()
 
         return HttpResponse(status=204)
 
 
-""" For everyone (GET request) or page admin (DELETE request) """
-
-
 class CurrentModerators(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
-
-    """ For everyone """
-    def get(self, request, name):
-        """ Get invites for user """
-
-        # TODO: fix this
-        return Response(
-            Page.objects.filter(name=name).annotate(username=F("moderators__username")).values_list("username", flat=True)
-        )
-
 
     """ For page admin """
     def delete(self, request, name):
@@ -100,6 +71,27 @@ class CurrentModerators(APIView):
 
         return HttpResponse(status=204)
 
+
+""" For everyone """
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def get_moderators(request, name):
+    """
+    If admin, get pending invites and all moderators (dictionary)
+    If any other user, get all moderators (list)
+    """
+
+    page = get_object_or_404(Page.objects.only("admin_id"), name=name)
+
+    if request.user.id == page.admin_id:
+        return Response({
+            "pending": page.moderatorinvite_set.values_list("invitee__username", flat=True),
+            "current": page.moderators.values_list("username", flat=True)
+        })
+    else:
+        return Response(page.moderators.values_list("username", flat=True))
 
 
 """ For everyone except admin """
