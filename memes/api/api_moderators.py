@@ -108,7 +108,7 @@ class HandleModeratorInvite(APIView):
     def put(self, request, name):
         """ Accept invite and become a moderator """
 
-        page = get_object_or_404(Page.objects.only("id"), name=name)
+        page = get_object_or_404(Page.objects.only("id", "display_name", "private"), name=name)
         # page = get_object_or_404(Page.objects.only("id", "num_mods"), name=name)
         invite = get_object_or_404(ModeratorInvite.objects.only("id"), invitee=request.user, page=page)
         page.moderators.add(request.user)
@@ -129,7 +129,10 @@ class HandleModeratorInvite(APIView):
 
         # return HttpResponseBadRequest()
 
-        return HttpResponse()
+        return Response({
+            "dname": page.display_name,
+            "private": page.private
+        })
 
     def delete(self, request, name):
         """ For users deleting invite to moderate for a page """
