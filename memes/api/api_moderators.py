@@ -131,6 +131,7 @@ class HandleModeratorInvite(APIView):
 
         # return HttpResponseBadRequest()
 
+        # Send some data back for client to use
         return Response({
             "dname": page.display_name,
             "private": page.private
