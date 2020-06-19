@@ -1,6 +1,7 @@
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.db.models import F
+from django.db import IntegrityError
 
 from memes.models import Page, User, ModeratorInvite
 
@@ -31,11 +32,11 @@ def invite_moderators(request, name):
     users = User.objects.only("id").filter(username__in=usernames)
 
     try:
-        new_pending = ModeratorInvite.objects.bulk_create([ModeratorInvite(invitee=user, page=page) for user in users])
+        ModeratorInvite.objects.bulk_create([ModeratorInvite(invitee=user, page=page) for user in users])
     except IntegrityError:
         return HttpResponseBadRequest("Moderator(s) already exist")
 
-    return Response(ModeratorInvite.objects.filter(invitee__in=users).values_list("invitee__username", flat=True))
+    return Response(users.values_list("username", flat=True))
 
 
 class PendingModeratorsAdmin(APIView):
