@@ -48,6 +48,7 @@ urlpatterns = [
     path("api/mods/pending/<str:name>", api_moderators.PendingModeratorsAdmin.as_view(), name="pending_moderators"),
     path("api/mods/current/<str:name>", api_moderators.CurrentModerators.as_view(), name="current_moderators"),
     path("api/mods/get_mods/<str:name>", api_moderators.get_moderators, name="get_moderators"),
+    path("api/mods/handle_invite", api_moderators.HandleModeratorInvite.as_view(), name="get_invite_moderators"),
     path("api/mods/handle_invite/<str:name>", api_moderators.HandleModeratorInvite.as_view(), name="handle_invite_moderators"),
     path("api/mods/leave/<str:name>", api_moderators.stop_moderating, name="leave_moderators"),
 

@@ -102,7 +102,7 @@ class HandleModeratorInvite(APIView):
 
     def get(self, request):
         """ Get invites for user """
-        return Response(ModeratorInvite.objects.annotate(pname=F("page__name")).filter(invitee=request.user).values("pname"))
+        return Response(ModeratorInvite.objects.filter(invitee=request.user).values_list("page__name", flat=True))
 
     def put(self, request, name):
         """ Accept invite and become a moderator """
