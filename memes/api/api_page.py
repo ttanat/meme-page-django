@@ -84,12 +84,14 @@ class HandleSubscribeRequest(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_page(self, user, name):
-        return get_object_or_404(Page.objects.only("id"), admin=user, name=name)
+        return get_object_or_404(Page.objects.only("id"), Q(admin=user)|Q(moderators=user), name=name)
 
     def get(self, request, name):
         """ ID of request is sent too """
+        page = get_object_or_404(Page.objects.only("admin_id"), Q(admin=request.user)|Q(moderators=request.user), name=name)
+
         reqs = SubscribeRequest.objects.annotate(username=F("user__username")) \
-                                       .filter(page=self.get_page(request.user, name)) \
+                                       .filter(page=page) \
                                        .values("id", "username", "timestamp") \
                                        .order_by("id")
 
@@ -100,11 +102,17 @@ class HandleSubscribeRequest(APIView):
         # Get first 25 requests
         results = reqs[:25]
 
-        return Response({
+        response = {
             # If there are more requests, get largest ID of results
             "lid": results[25]["id"] if reqs.count() > 25 else None,
             "results": results
-        })
+        }
+
+        # Tell client if user is admin
+        if "lid" not in request.GET:
+            response["is_admin"] = request.user.id == page.admin_id
+
+        return Response(response)
 
     def put(self, request, name):
         """ Accept request and delete object """
