@@ -180,10 +180,10 @@ class HandleInviteLinkUser(APIView):
 
     def get(self, request, uuid):
         """ Get page details when user goes to invite link """
-        if not InviteLink.objects.filter(uuid=uuid).exists():
-            return JsonResponse({"valid": False})
-        else:
+        try:
             link = InviteLink.objects.select_related("page").only("page__name", "page__display_name", "page__image").get(uuid=uuid)
+        except InviteLink.DoesNotExist:
+            return JsonResponse({"valid": False})
 
         response = {"valid": True, "name": link.page.name}
 
@@ -197,7 +197,10 @@ class HandleInviteLinkUser(APIView):
 
     def put(self, request, uuid):
         """ uuid of link to use to add user """
-        link = InviteLink.objects.select_related("page").only("id", "page__id", "page__name", "page__admin_id", "uses").get(uuid=uuid)
+        link = get_object_or_404(
+            InviteLink.objects.select_related("page").only("id", "page__id", "page__name", "page__admin_id", "uses"),
+            uuid=uuid
+        )
 
         # Don't subscribe admin to their own page and don't let a subscriber use a link
         if request.user.id == link.page.admin_id or link.page.subscribers.filter(id=request.user.id).exists():
