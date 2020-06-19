@@ -60,10 +60,10 @@ class CurrentModerators(APIView):
     """ For page admin """
     def delete(self, request, name):
         """ For admin deleting current moderators """
-        if "usernames" not in request.GET:
+        if "username" not in request.GET:
             return HttpResponseBadRequest()
 
-        usernames = request.GET["usernames"]
+        usernames = request.GET.getlist("username")
         page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
         # page = get_object_or_404(Page.objects.only("id", "num_mods"), admin=request.user, name=name)
         page.moderators.remove(*User.objects.filter(username__in=usernames))
