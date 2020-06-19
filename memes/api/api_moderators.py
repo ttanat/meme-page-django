@@ -84,15 +84,18 @@ def get_moderators(request, name):
     If any other user, get all moderators (list)
     """
 
-    page = get_object_or_404(Page.objects.only("admin_id"), name=name)
+    page = get_object_or_404(Page.objects.only("admin_id", "private"), name=name)
+
+    response = {
+        "current": page.moderators.values_list("username", flat=True),
+        # Tell client if page is private
+        "private": page.private
+    }
 
     if request.user.id == page.admin_id:
-        return Response({
-            "pending": page.moderatorinvite_set.values_list("invitee__username", flat=True),
-            "current": page.moderators.values_list("username", flat=True)
-        })
-    else:
-        return Response(page.moderators.values_list("username", flat=True))
+        response["pending"] = page.moderatorinvite_set.values_list("invitee__username", flat=True)
+
+    return Response(response)
 
 
 """ For everyone except admin """
