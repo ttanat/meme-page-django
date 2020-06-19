@@ -42,7 +42,8 @@ def page(request, name):
             response["is_requested"] = SubscribeRequest.objects.filter(user=request.user, page=page).exists()
 
     # Prevent loading memes if page is private and user is not subscribed and user is not page admin
-    response["show"] = not page.private or response.get("is_subscribed") or page.admin_id == request.user.id
+    response["show"] = (not page.private or response.get("is_subscribed") or page.admin_id == request.user.id
+                            or page.moderators.filter(id=request.user.id).exists())
 
     if response["show"]:
         response["page"]["moderators"] = page.moderators.values_list("username", flat=True)

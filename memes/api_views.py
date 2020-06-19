@@ -103,7 +103,9 @@ class PrivateMemeViewSet(viewsets.ReadOnlyModelViewSet):
 
         page = get_object_or_404(Page.objects.only("id", "admin_id"), name=self.request.query_params["n"])
 
-        if not page.subscribers.filter(pk=self.request.user.pk).exists() and page.admin_id != self.request.user.id:
+        if (not page.subscribers.filter(id=self.request.user.id).exists()
+                and page.admin_id != self.request.user.id
+                    and not page.moderators.filter(id=self.request.user.id).exists()):
             raise PermissionDenied
 
         return Meme.objects.annotate(username=F("user__username")).filter(page=page, hidden=False)
