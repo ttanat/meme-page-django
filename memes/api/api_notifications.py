@@ -1,7 +1,7 @@
 from django.http import HttpResponseBadRequest
 from django.core.paginator import Paginator
 
-from memes.models import Notification
+from memes.models import Notification, ModeratorInvite
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -16,7 +16,7 @@ def nav_notifications(request):
 
     # Must force evaluation of queryset before updating
     response = {
-        "count": notifs.count(),
+        "count": notifs.count() + ModeratorInvite.objects.filter(invitee=request.user).count(),
         "list": [n for n in to_send.values("link", "image", "message")]
     }
 
