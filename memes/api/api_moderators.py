@@ -112,6 +112,7 @@ class HandleModeratorInvite(APIView):
         # page = get_object_or_404(Page.objects.only("id", "num_mods"), name=name)
         invite = get_object_or_404(ModeratorInvite.objects.only("id"), invitee=request.user, page=page)
         page.moderators.add(request.user)
+        page.subscribers.add(request.user)
         invite.delete()
         # with transaction.atomic():
         #     if page.num_mods >= 100:
@@ -121,6 +122,7 @@ class HandleModeratorInvite(APIView):
         #             ModeratorInvite.objects.filter(page=page).delete()
 
         #         page.moderators.add(request.user)
+        #         page.subscribers.add(request.user)
         #         page.num_mods = F("num_mods") + 1
         #         page.save(update_fields=["num_mods"])
         #         invite.delete()
