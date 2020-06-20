@@ -79,14 +79,11 @@ class Meme(models.Model):
     num_comments = models.PositiveIntegerField(default=0)
     nsfw = models.BooleanField(default=False)
     category = models.ForeignKey("Category", on_delete=models.SET_NULL, null=True, blank=True)
-    # tags = models.ManyToManyField("Tag", related_name="memes")
+    tags = models.ManyToManyField("Tag", related_name="memes")
     # tags_list = models.ArrayField(ArrayField(models.CharField(max_length=64, blank=False), blank=True))
     ip_address = models.GenericIPAddressField(null=True)
-    is_seen = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="seen")
-    # ^ Replace with views
     hidden = models.BooleanField(default=False)
-    # views = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="viewed")
-    # num_views = models.PositiveIntegerField(default=0)
+    num_views = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-id"]
@@ -167,15 +164,8 @@ class Meme(models.Model):
         super().delete(*args, **kwargs)
 
 
-# class View(models.Model):
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-#     meme = models.ForeignKey(Meme, on_delete=models.CASCADE)
-#     viewed_on = models.DateTimeField(auto_now=False, default=timezone.now)
-
-
 class Tag(models.Model):
     name = models.CharField(max_length=64, unique=True, blank=False)
-    meme = models.ManyToManyField(Meme, related_name="tags")
 
     def __str__(self):
         return f"{self.name}"
@@ -193,22 +183,21 @@ def user_directory_path_comments(instance, filename):
 
 
 class Comment(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    # user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="comments")
     reply_to = models.ForeignKey("Comment", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
     content = models.CharField(max_length=150, blank=True)
     mention = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="mention")
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     points = models.IntegerField(default=0)
-    # num_replies = models.PositiveIntegerField(default=0)
+    num_replies = models.PositiveIntegerField(default=0)
     post_date = models.DateTimeField(auto_now=False, default=timezone.now)
     image = models.ImageField(upload_to=user_directory_path_comments, null=True, blank=True)
     edited = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
 
     class Meta:
-        constraints = [models.CheckConstraint(check=~models.Q(content=None, image=None), name="content_image_both_not_null")]
+        constraints = [models.CheckConstraint(check=~models.Q(content=None, image=None, deleted=False), name="content_image_both_not_null")]
 
     def __str__(self):
         return f"{self.user.username}: {self.content}"
@@ -228,47 +217,35 @@ class Comment(models.Model):
 
 class Like(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    point = models.SmallIntegerField()
-    # ^ Change to IntegerField
-    meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=True, blank=True, related_name="likes")
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True, related_name="comment_likes")
+    point = models.IntegerField()
     liked_on = models.DateTimeField(auto_now=False, default=timezone.now)
 
     class Meta:
-        # abstract = True
-        constraints = [
-            models.UniqueConstraint(fields=["user", "meme", "comment"], name="unique_vote"),
-            models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_vote") # single_point_vote
-        ]
+        abstract = True
+        constraints = [models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_point_vote")]
 
     def __str__(self):
         return f"{self.user.username} {'meme' if self.meme else 'comment'} {'' if self.point == 1 else 'dis'}like"
 
 
-# class MemeLike(Like):
-#     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="likes")
+class MemeLike(Like):
+    meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="likes")
 
-#     class Meta:
-#         constraints = [
-#             models.UniqueConstraint(fields=["user", "meme"], name="unique_meme_vote"),
-#             models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_point_vote")
-#         ]
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "meme"], name="unique_meme_vote")]
 
-#     def __str__(self):
-#         return f"{self.user.username} meme {'' if self.point == 1 else 'dis'}like"
+    def __str__(self):
+        return f"{self.user.username} meme {'' if self.point == 1 else 'dis'}like"
 
 
-# class CommentLike(Like):
-#     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=False, blank=False, related_name="c_likes")
+class CommentLike(Like):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=False, blank=False, related_name="comment_likes")
 
-#     class Meta:
-#         constraints = [
-#             models.UniqueConstraint(fields=["user", "comment"], name="unique_comment_vote"),
-#             models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_point_vote")
-#         ]
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "comment"], name="unique_comment_vote")]
 
-#     def __str__(self):
-#         return f"{self.user.username} comment {'' if self.point == 1 else 'dis'}like"
+    def __str__(self):
+        return f"{self.user.username} comment {'' if self.point == 1 else 'dis'}like"
 
 
 def page_directory_path(instance, filename):
@@ -277,30 +254,24 @@ def page_directory_path(instance, filename):
 
 class Page(models.Model):
     admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating")
-    # moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating", through="Moderator")
+    moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating", through="Moderator")
     subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="subscriptions")
     created = models.DateTimeField(auto_now=False, default=timezone.now)
     name = models.CharField(max_length=32, blank=False, unique=True)
     display_name = models.CharField(max_length=32, blank=True)
     image = models.ImageField(upload_to=page_directory_path, null=True, blank=True)
     cover = models.ImageField(upload_to=page_directory_path, null=True, blank=True)
-    description = models.CharField(max_length=150, blank=True, default="")
-    # description = models.CharField(max_length=200, blank=True, default="")
-    # description2 = models.CharField(max_length=300, blank=True, default="")
+    description = models.CharField(max_length=300, blank=True, default="")
     nsfw = models.BooleanField(default=False)
     private = models.BooleanField(default=False)
     # True if subscribers can post / False if only admin can post
     permissions = models.BooleanField(default=True)
-    # num_mods = models.PositiveSmallIntegerField(default=0)
+    num_mods = models.PositiveSmallIntegerField(default=0)
     num_subscribers = models.PositiveIntegerField(default=0)
     num_posts = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.name}"
-
-    # def get_display_name(self):
-    #     return f"{self.display_name}" if self.display_name else f"{self.name}"
 
     def resize_img(self):
         img = Image.open(self.image.path)
@@ -320,10 +291,10 @@ class Page(models.Model):
         super().delete(*args, **kwargs)
 
 
-# class Moderator(models.Model):
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-#     page = models.ForeignKey(Page, on_delete=models.CASCADE)
-#     date_joined = models.DateTimeField(auto_now=False, default=timezone.now)
+class Moderator(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    page = models.ForeignKey(Page, on_delete=models.CASCADE)
+    date_joined = models.DateTimeField(auto_now=False, default=timezone.now)
 
 
 class Notification(models.Model):
