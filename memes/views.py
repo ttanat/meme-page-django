@@ -235,11 +235,11 @@ def upload(request):
 
         if page_name:
             page = get_object_or_404(Page.objects.only("admin_id", "permissions"), name=page_name)
-            if page.admin_id != request.user.id:
-                if not page.permissions:
-                    return JsonResponse({"success": False, "message": "Only admin of this page can post"})
-                if not page.subscribers.filter(id=request.user.id).exists():
-                    return JsonResponse({"success": False, "message": "Must be subscribed to post"})
+            # User must be admin or subscriber or moderator to post to page
+            if not (page.admin_id == request.user.id
+                        or (page.permissions and page.subscribers.filter(id=request.user.id).exists())
+                            or page.moderators.filter(id=request.user.id).exists()):
+                return JsonResponse({"success": False, "message": "Cannot post to this page"})
 
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
