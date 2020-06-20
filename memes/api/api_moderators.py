@@ -1,7 +1,7 @@
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.db.models import F
-from django.db import IntegrityError
+from django.db import transaction, IntegrityError
 
 from memes.models import Page, User, ModeratorInvite, Meme
 
@@ -22,10 +22,9 @@ def invite_moderators(request, name):
     if not usernames:
         return HttpResponseBadRequest()
 
-    page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
-    # page = get_object_or_404(Page.objects.only("id", "num_mods"), admin=request.user, name=name)
+    page = get_object_or_404(Page.objects.only("num_mods"), admin=request.user, name=name)
 
-    current_pending_count = page.moderatorinvite_set.count() + page.moderators.count() # + page.num_mods
+    current_pending_count = page.moderatorinvite_set.count() + page.num_mods
     if current_pending_count + len(usernames) > 50:
         return HttpResponseBadRequest("Can only have 50 moderators")
 
@@ -63,12 +62,11 @@ class CurrentModerators(APIView):
         if "username" not in request.GET:
             return HttpResponseBadRequest()
 
-        usernames = request.GET.getlist("username")
-        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
-        # page = get_object_or_404(Page.objects.only("id", "num_mods"), admin=request.user, name=name)
-        page.moderators.remove(*User.objects.filter(username__in=usernames))
-        # page.num_mods = F("num_mods") - 1
-        # page.save(update_fields=["num_mods"])
+        page = get_object_or_404(Page.objects.only("num_mods"), admin=request.user, name=name)
+        page.moderators.remove(*User.objects.filter(username__in=request.GET.getlist("username")))
+
+        page.num_mods = F("num_mods") - 1
+        page.save(update_fields=["num_mods"])
 
         return HttpResponse(status=204)
 
@@ -108,43 +106,37 @@ class HandleModeratorInvite(APIView):
     def put(self, request, name):
         """ Accept invite and become a moderator """
 
-        page = get_object_or_404(Page.objects.only("id", "display_name", "private"), name=name)
-        # page = get_object_or_404(Page.objects.only("id", "num_mods"), name=name)
-        invite = get_object_or_404(ModeratorInvite.objects.only("id"), invitee=request.user, page=page)
-        page.moderators.add(request.user)
-        page.subscribers.add(request.user)
-        invite.delete()
-        # with transaction.atomic():
-        #     if page.num_mods >= 100:
-        #         return HttpResponseBadRequest("Page has too many moderators already")
-        #     else:
-        #         if page.num_mods >= 99:
-        #             ModeratorInvite.objects.filter(page=page).delete()
+        page = get_object_or_404(Page.objects.only("display_name", "private", "num_mods"), name=name)
 
-        #         page.moderators.add(request.user)
-        #         page.subscribers.add(request.user)
-        #         page.num_mods = F("num_mods") + 1
-        #         page.save(update_fields=["num_mods"])
-        #         invite.delete()
+        with transaction.atomic():
+            invite = get_object_or_404(ModeratorInvite.objects.only("id"), invitee=request.user, page=page)
+            invite.delete()
 
-        #         return HttpResponse()
+            if page.num_mods >= 50:
+                return HttpResponseBadRequest("Page has too many moderators already")
+            else:
+                if page.num_mods >= 49:
+                    ModeratorInvite.objects.filter(page=page).delete()
 
-        # return HttpResponseBadRequest()
+                page.moderators.add(request.user)
+                page.subscribers.add(request.user)
 
-        # Send some data back for client to use
-        return Response({
-            "dname": page.display_name,
-            "private": page.private
-        })
+                page.num_mods = F("num_mods") + 1
+                page.save(update_fields=["num_mods"])
+
+                # Send some data back for client to use
+                return Response({
+                    "dname": page.display_name,
+                    "private": page.private
+                })
+
+        return HttpResponseBadRequest()
+
 
     def delete(self, request, name):
         """ For users deleting invite to moderate for a page """
 
-        # page = get_object_or_404(Page.objects.only("num_mods"), name=name)
         ModeratorInvite.objects.filter(invitee=request.user, page__name=name).delete()
-        # ModeratorInvite.objects.filter(invitee=request.user, page=page).delete()
-        # page.num_mods = F("num_mods") - 1
-        # page.save(update_fields=["num_mods"])
 
         return HttpResponse(status=204)
 
