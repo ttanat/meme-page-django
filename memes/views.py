@@ -4,7 +4,7 @@ from django.db.models import F, Q
 from django.utils import timezone
 # from django.views.decorators.cache import cache_page
 
-from .models import Page, Meme, Comment, Like, Category, Tag, User
+from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User
 from .utils import UOC, SFT, CATEGORIES
 
 from rest_framework.decorators import api_view, permission_classes
@@ -103,9 +103,9 @@ def get_likes(request, obj):
         return JsonResponse([], safe=False)
 
     if obj == "m":
-        return Response(Like.objects.filter(user=request.user, meme__uuid__in=uuids).annotate(uuid=F("meme__uuid")).values("uuid", "point"))
+        return Response(MemeLike.objects.filter(user=request.user, meme__uuid__in=uuids).annotate(uuid=F("meme__uuid")).values("uuid", "point"))
     elif obj == "c":
-        return Response(Like.objects.filter(user=request.user, comment__uuid__in=uuids).annotate(uuid=F("comment__uuid")).values("uuid", "point"))
+        return Response(CommentLike.objects.filter(user=request.user, comment__uuid__in=uuids).annotate(uuid=F("comment__uuid")).values("uuid", "point"))
 
     raise Http404
 
@@ -125,18 +125,18 @@ def like(request):
     if type_ == "m":
         if request.method == "PUT":
             meme = get_object_or_404(Meme, uuid=uuid)
-            obj, created = Like.objects.update_or_create(user=request.user, meme=meme, defaults={"point": point, "liked_on": timezone.now()})
+            obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, defaults={"point": point, "liked_on": timezone.now()})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
-            Like.objects.filter(user=request.user, meme__uuid=uuid).delete()
+            MemeLike.objects.filter(user=request.user, meme__uuid=uuid).delete()
             return HttpResponse(status=204)
     elif type_ == "c":
         if request.method == "PUT":
             comment = get_object_or_404(Comment.objects.prefetch_related("meme"), uuid=uuid)
-            obj, created = Like.objects.update_or_create(user=request.user, comment=comment, defaults={"point": point, "liked_on": timezone.now()})
+            obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, defaults={"point": point, "liked_on": timezone.now()})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
-            Like.objects.filter(user=request.user, comment__uuid=uuid).delete()
+            CommentLike.objects.filter(user=request.user, comment__uuid=uuid).delete()
             return HttpResponse(status=204)
 
     return HttpResponseBadRequest()

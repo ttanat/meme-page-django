@@ -5,5 +5,6 @@ from .models import *
 admin.site.register(Meme)
 admin.site.register(Tag)
 admin.site.register(Comment)
-admin.site.register(Like)
+admin.site.register(MemeLike)
+admin.site.register(CommentLike)
 admin.site.register(Page)

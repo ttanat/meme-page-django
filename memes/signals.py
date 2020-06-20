@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save, m2m_changed, pre_delete
 from django.dispatch import receiver
-from .models import Meme, Like, Comment, User, Page, Notification
+from .models import Meme, MemeLike, CommentLike, Comment, User, Page, Notification
 from django.db.models import F
 # from notifications.signals import notify
 from django.utils import timezone
@@ -28,33 +28,23 @@ def delete_meme(sender, instance, **kwargs):
         instance.page.save(update_fields=["num_posts"])
 
 
-@receiver(post_save, sender=Like)
-def vote(sender, instance, created, **kwargs):
+@receiver(post_save, sender=MemeLike)
+def vote_meme(sender, instance, created, **kwargs):
     # Calculate point change
     change = instance.point if created else instance.point * 2
 
-    # Update points on meme/comment and update clout on user who posted that
-    if instance.meme:
-        new_points = instance.meme.points + change    # Do this so no need to call .refresh_from_db()
+    # Update points on meme and update clout on user who posted that
+    new_points = instance.meme.points + change    # Do this so no need to call .refresh_from_db()
 
-        instance.meme.points = F("points") + change
-        instance.meme.save(update_fields=["points"])
+    instance.meme.points = F("points") + change
+    instance.meme.save(update_fields=["points"])
 
-        instance.meme.user.clout = F("clout") + change
-        instance.meme.user.save(update_fields=["clout"])
-
-    elif instance.comment:
-        new_points = instance.comment.points + change    # Do this so no need to call .refresh_from_db()
-
-        instance.comment.points = F("points") + change
-        instance.comment.save(update_fields=["points"])
-
-        instance.comment.user.clout = F("clout") + change
-        instance.comment.user.save(update_fields=["clout"])
+    instance.meme.user.clout = F("clout") + change
+    instance.meme.user.save(update_fields=["clout"])
 
     # Update or create notification if vote is a like (not dislike)
     if created and instance.point == 1:
-        if instance.meme and instance.meme.user_id != instance.user_id:
+        if instance.meme.user_id != instance.user_id:
             if new_points < 11 or (new_points < 101 and new_points % 25 == 0) or new_points % 100 == 0:
                 s = 's' if new_points > 2 else ''
                 message = f"{instance.user} {f'and {new_points - 1} other{s} ' if new_points > 1 else ''}liked your meme"
@@ -72,39 +62,57 @@ def vote(sender, instance, created, **kwargs):
                     }
                 )
 
-        elif instance.comment and instance.comment.user_id != instance.user_id:
+
+@receiver(post_save, sender=CommentLike)
+def vote_comment(sender, instance, created, **kwargs):
+    # Calculate point change
+    change = instance.point if created else instance.point * 2
+
+    # Update points on comment and update clout on user who posted that
+    new_points = instance.comment.points + change    # Do this so no need to call .refresh_from_db()
+
+    instance.comment.points = F("points") + change
+    instance.comment.save(update_fields=["points"])
+
+    instance.comment.user.clout = F("clout") + change
+    instance.comment.user.save(update_fields=["clout"])
+
+    # Update or create notification if vote is a like (not dislike)
+    if created and instance.point == 1:
+        if instance.comment.user_id != instance.user_id:
             if new_points < 11 or (new_points < 101 and new_points % 25 == 0) or new_points % 100 == 0:
-                    s = 's' if new_points > 2 else ''
-                    message = f"{instance.user} {f'and {new_points - 1} other{s} ' if new_points > 1 else ''}liked your comment"
+                s = 's' if new_points > 2 else ''
+                message = f"{instance.user} {f'and {new_points - 1} other{s} ' if new_points > 1 else ''}liked your comment"
 
-                    Notification.objects.update_or_create(
-                        action="liked",
-                        recipient=instance.comment.user,
-                        link=f"/m/{instance.comment.meme.uuid}",
-                        target_comment=instance.comment,
-                        defaults={
-                            "seen": False,
-                            "message": message,
-                            "timestamp": timezone.now()
-                        }
-                    )
+                Notification.objects.update_or_create(
+                    action="liked",
+                    recipient=instance.comment.user,
+                    link=f"/m/{instance.comment.meme.uuid}",
+                    target_comment=instance.comment,
+                    defaults={
+                        "seen": False,
+                        "message": message,
+                        "timestamp": timezone.now()
+                    }
+                )
 
 
-@receiver(pre_delete, sender=Like)
-def unvote(sender, instance, **kwargs):
-    if instance.meme:
-        instance.meme.points = F("points") - instance.point
-        instance.meme.save(update_fields=["points"])
+@receiver(pre_delete, sender=MemeLike)
+def unvote_meme(sender, instance, **kwargs):
+    instance.meme.points = F("points") - instance.point
+    instance.meme.save(update_fields=["points"])
 
-        instance.meme.user.clout = F("clout") - instance.point
-        instance.meme.user.save(update_fields=["clout"])
+    instance.meme.user.clout = F("clout") - instance.point
+    instance.meme.user.save(update_fields=["clout"])
 
-    elif instance.comment:
-        instance.comment.points = F("points") - instance.point
-        instance.comment.save(update_fields=["points"])
 
-        instance.comment.user.clout = F("clout") - instance.point
-        instance.comment.user.save(update_fields=["clout"])
+@receiver(pre_delete, sender=CommentLike)
+def unvote_comment(sender, instance, **kwargs):
+    instance.comment.points = F("points") - instance.point
+    instance.comment.save(update_fields=["points"])
+
+    instance.comment.user.clout = F("clout") - instance.point
+    instance.comment.user.save(update_fields=["clout"])
 
 
 @receiver(post_save, sender=Comment)
