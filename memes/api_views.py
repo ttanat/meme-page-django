@@ -1,4 +1,4 @@
-from django.db.models import F, Q, Count
+from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
 
 from .serializers import *
@@ -132,7 +132,7 @@ class CommentViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        return Comment.objects.annotate(username=F("user__username"), num_replies=Count("replies", distinct=True)) \
+        return Comment.objects.annotate(username=F("user__username")) \
                               .filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
 
 
@@ -144,7 +144,7 @@ class CommentFullViewSet(CommentViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        return Comment.objects.annotate(username=F("user__username"), num_replies=Count("replies", distinct=True)) \
+        return Comment.objects.annotate(username=F("user__username")) \
                               .filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
 
 

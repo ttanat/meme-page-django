@@ -126,6 +126,10 @@ def comment_meme(sender, instance, created, **kwargs):
         instance.meme.save(update_fields=["num_comments"])
 
         if instance.reply_to:
+            # Update number of replies
+            instance.reply_to.num_replies = F("num_replies") + 1
+            instance.reply_to.save(update_fields=["num_replies"])
+
             if instance.reply_to.user_id != instance.user_id:
                 Notification.objects.create(
                     actor=instance.user,

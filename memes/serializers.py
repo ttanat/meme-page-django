@@ -33,7 +33,6 @@ class CommentSerializer(serializers.ModelSerializer):
     content = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
     dp_url = serializers.SerializerMethodField()
-    num_replies = serializers.IntegerField()
 
     class Meta:
         model = Comment
@@ -53,7 +52,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_dp_url(self, obj):
         try:
-            return "" if obj.deleted else  self.context["request"].build_absolute_uri(obj.user.image.url)
+            return "" if obj.deleted else self.context["request"].build_absolute_uri(obj.user.image.url)
         except ValueError:
             return None
 
