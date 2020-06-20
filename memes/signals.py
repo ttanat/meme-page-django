@@ -122,22 +122,22 @@ def comment_meme(sender, instance, created, **kwargs):
                 Notification.objects.create(
                     actor=instance.user,
                     action="replied",
-                    recipient=instance.comment.reply_to.user,
-                    link=f"/m/{instance.comment.meme.uuid}",
+                    recipient=instance.reply_to.user,
+                    link=f"/m/{instance.meme.uuid}",
                     image=instance.user.image.url if instance.user.image else "",
                     message=f"{instance.user} replied to your comment",
-                    target_comment=instance.comment
+                    target_comment=instance.reply_to
                 )
         else:
             if instance.meme.user_id != instance.user_id:
                 Notification.objects.create(
                     actor=instance.user,
                     action="commented",
-                    recipient=instance.comment.meme.user,
-                    link=f"/m/{instance.comment.meme.uuid}",
-                    image=instance.user.image.url if instance.user.image else "",
+                    recipient=instance.meme.user,
+                    link=f"/m/{instance.meme.uuid}",
+                    image=instance.meme.small_thumbnail.url,
                     message=f"{instance.user} commented on your meme",
-                    target_comment=instance.comment
+                    target_meme=instance.meme
                 )
 
 
