@@ -177,13 +177,19 @@ def comment(request, action):
 
     elif request.method == "DELETE" and action == "delete":
         """ Delete comments and replies """
-        if "u" in request.GET:
-            Comment.objects.filter(user=request.user, uuid=request.GET["u"]).update(deleted=True)
-            # c = Comment.objects.only("deleted").get(user=request.user, uuid=request.GET.get("u"))
-            # c.deleted = True
-            # c.save()
+        if "u" not in request.GET:
+            return HttpResponseBadRequest()
 
-            return HttpResponse(status=204)
+        c = get_object_or_404(Comment.objects.only("image"), user=request.user, uuid=request.GET["u"], deleted=False)
+
+        # Delete image if exists and set deleted to true
+        if c.image:
+            c.image.delete()
+        c.deleted = True
+
+        c.save(update_fields=["deleted"])
+
+        return HttpResponse(status=204)
 
     raise Http404
 
