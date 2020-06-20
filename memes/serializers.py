@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Meme, Comment, Like, User, Page, Notification
+from .models import Meme, Comment, User, Page, Notification
 from django.utils import timezone
 from django.db.models import Q, F
 from django.contrib.auth import authenticate
