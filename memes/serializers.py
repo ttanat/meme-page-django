@@ -148,14 +148,14 @@ class UserMemesSerializer(ProfileMemesSerializer):
 
 class ProfileCommentsSerializer(serializers.ModelSerializer):
     m_uuid = serializers.CharField()
-    url = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     rt = serializers.CharField(default=None)
 
     class Meta:
         model = Comment
-        fields = ("content", "uuid", "m_uuid", "url", "rt")
+        fields = ("content", "uuid", "m_uuid", "image", "rt")
 
-    def get_url(self, obj):
+    def get_image(self, obj):
         try:
             return self.context["request"].build_absolute_uri(obj.image.url)
         except ValueError:
