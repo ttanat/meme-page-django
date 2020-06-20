@@ -25,7 +25,7 @@ class MemeSerializer(serializers.ModelSerializer):
         try:
             return self.context["request"].build_absolute_uri(obj.user.image.url)
         except ValueError:
-            return None
+            return ""
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -46,15 +46,15 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         try:
-            return None if obj.deleted else self.context["request"].build_absolute_uri(obj.image.url)
+            return "" if obj.deleted else self.context["request"].build_absolute_uri(obj.image.url)
         except ValueError:
-            return None
+            return ""
 
     def get_dp_url(self, obj):
         try:
             return "" if obj.deleted else self.context["request"].build_absolute_uri(obj.user.image.url)
         except ValueError:
-            return None
+            return ""
 
 
 class CommentFullSerializer(CommentSerializer):
@@ -82,13 +82,13 @@ class ReplySerializer(serializers.ModelSerializer):
         try:
             return self.context["request"].build_absolute_uri(obj.image.url)
         except ValueError:
-            return None
+            return ""
 
     def get_dp_url(self, obj):
         try:
             return self.context["request"].build_absolute_uri(obj.user.image.url)
         except ValueError:
-            return None
+            return ""
 
 
 class SearchUserSerializer(serializers.ModelSerializer):
@@ -102,7 +102,7 @@ class SearchUserSerializer(serializers.ModelSerializer):
         try:
             return self.context["request"].build_absolute_uri(obj.image.url)
         except ValueError:
-            return None
+            return ""
 
 
 class SearchPageSerializer(serializers.ModelSerializer):
@@ -117,7 +117,7 @@ class SearchPageSerializer(serializers.ModelSerializer):
         try:
             return self.context["request"].build_absolute_uri(obj.image.url)
         except ValueError:
-            return None
+            return ""
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -159,4 +159,4 @@ class ProfileCommentsSerializer(serializers.ModelSerializer):
         try:
             return self.context["request"].build_absolute_uri(obj.image.url)
         except ValueError:
-            return None
+            return ""
