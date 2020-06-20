@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import F
 from django.db import IntegrityError
 
-from memes.models import Page, User, ModeratorInvite
+from memes.models import Page, User, ModeratorInvite, Meme
 
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
@@ -159,3 +159,25 @@ def stop_moderating(self, request, name):
     page.moderators.remove(request.user)
 
     return HttpResponse(status=204)
+
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def remove_meme_from_page(request, uuid):
+    meme = get_object_or_404(
+        Meme.objects.select_related("page").only("user_id", "page__admin_id", "page__num_posts"),
+        uuid=uuid
+    )
+
+    # Admin can remove all memes, mods can remove all memes except admin's
+    if (request.user.id == meme.page.admin_id
+            or meme.page.moderators.filter(id=request.user.id).exists() and meme.user_id != meme.page.admin_id):
+        meme.page = None
+        meme.save(update_fields=["page"])
+
+        meme.page.num_posts = F("num_posts") - 1
+        meme.page.save(update_fields=["num_posts"])
+
+        return HttpResponse()
+
+    return HttpResponse("Cannot remove admin's memes", status=403) if meme.user_id == meme.page.admin_id else HttpResponseBadRequest()

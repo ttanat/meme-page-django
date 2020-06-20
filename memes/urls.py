@@ -51,6 +51,8 @@ urlpatterns = [
     path("api/mods/handle_invite", api_moderators.HandleModeratorInvite.as_view(), name="get_invite_moderators"),
     path("api/mods/handle_invite/<str:name>", api_moderators.HandleModeratorInvite.as_view(), name="handle_invite_moderators"),
     path("api/mods/leave/<str:name>", api_moderators.stop_moderating, name="leave_moderators"),
+    # Remove meme from page
+    path("api/remove_meme/<str:uuid>", api_moderators.remove_meme_from_page, name="remove_meme_from_page"),
 
     # Settings
     path("api/settings", api_settings.user_settings, name="settings"),
