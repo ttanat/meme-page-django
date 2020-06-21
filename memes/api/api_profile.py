@@ -1,8 +1,9 @@
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 
 from memes.serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer, ProfileFollowersSerializer
-from memes.models import *
+from memes.models import User, Page, Meme, Comment
 
 from rest_framework import viewsets, pagination
 from rest_framework.decorators import api_view, permission_classes
@@ -120,3 +121,13 @@ class ProfileFollowersViewSet(viewsets.ReadOnlyModelViewSet):
 class ProfileFollowingViewSet(ProfileFollowersViewSet):
     def get_queryset(self):
         return self.request.user.follows.only("username", "image")
+
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def remove_follower(request, username):
+    u = get_object_or_404(User.objects.only("id"), username=username)
+    # Cannot do request.user.followers.remove(u), causes IntegrityError
+    u.follows.remove(request.user)
+
+    return HttpResponse()
