@@ -160,3 +160,17 @@ class ProfileCommentsSerializer(serializers.ModelSerializer):
             return self.context["request"].build_absolute_uri(obj.image.url)
         except ValueError:
             return ""
+
+
+class ProfileFollowersSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("username", "image")
+
+    def get_image(self, obj):
+        try:
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        except ValueError:
+            return ""

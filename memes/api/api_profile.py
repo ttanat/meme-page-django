@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 
-from memes.serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer
+from memes.serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer, ProfileFollowersSerializer
 from memes.models import *
 
 from rest_framework import viewsets, pagination
@@ -95,3 +95,28 @@ class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
             rt=F("reply_to__user__username"),
             m_uuid=F("meme__uuid")
         ).filter(user=self.request.user, deleted=False).order_by("-id")
+
+
+class ProfileFollowersPagination(pagination.PageNumberPagination):
+    page_size = 20
+
+    def get_paginated_response(self, data):
+        return Response({
+            "next": self.get_next_link(),
+            "results": data
+        })
+
+
+class ProfileFollowersViewSet(viewsets.ReadOnlyModelViewSet):
+    model = User
+    serializer_class = ProfileFollowersSerializer
+    pagination_class = ProfileFollowersPagination
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.request.user.followers.only("username", "image")
+
+
+class ProfileFollowingViewSet(ProfileFollowersViewSet):
+    def get_queryset(self):
+        return self.request.user.follows.only("username", "image")
