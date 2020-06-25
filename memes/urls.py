@@ -28,6 +28,8 @@ urlpatterns = [
     # Profile
     path("api/profile", api_profile.profile),
     path("api/user/<str:username>", api_profile.user_page),
+    path("api/profile/followers/", api_profile.get_followers),
+    path("api/profile/following/", api_profile.get_following),
     path("api/remove_follower/<str:username>", api_profile.remove_follower),
 
     # Follow/unfollow user

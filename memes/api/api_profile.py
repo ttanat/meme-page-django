@@ -2,7 +2,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 
-from memes.serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer, ProfileFollowersSerializer
+from memes.serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer
 from memes.models import User, Page, Meme, Comment
 
 from rest_framework import viewsets, pagination
@@ -98,29 +98,42 @@ class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
         ).filter(user=self.request.user, deleted=False).order_by("-id")
 
 
-class ProfileFollowersPagination(pagination.PageNumberPagination):
-    page_size = 20
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_followers(request):
+    followers = request.user.followers.only("username", "image").order_by("username")
 
-    def get_paginated_response(self, data):
-        return Response({
-            "next": self.get_next_link(),
-            "results": data
-        })
+    if "after" in request.GET:
+        followers = followers.filter(username__gt=request.GET["after"])
+
+    results = [
+        {"username": u.username, "image": request.build_absolute_uri(u.image.url) if u.image else None}
+        for u in followers[:25]
+    ]
+
+    return Response({
+        "next": request.build_absolute_uri(f"?after={results[-1]['username']}") if followers.count() > 25 else None,
+        "results": results
+    })
 
 
-class ProfileFollowersViewSet(viewsets.ReadOnlyModelViewSet):
-    model = User
-    serializer_class = ProfileFollowersSerializer
-    pagination_class = ProfileFollowersPagination
-    permission_classes = [IsAuthenticated]
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_following(request):
+    following = request.user.follows.only("username", "image").order_by("username")
 
-    def get_queryset(self):
-        return self.request.user.followers.only("username", "image")
+    if "after" in request.GET:
+        following = following.filter(username__gt=request.GET["after"])
 
+    results = [
+        {"username": u.username, "image": request.build_absolute_uri(u.image.url) if u.image else None}
+        for u in following[:25]
+    ]
 
-class ProfileFollowingViewSet(ProfileFollowersViewSet):
-    def get_queryset(self):
-        return self.request.user.follows.only("username", "image")
+    return Response({
+        "next": request.build_absolute_uri(f"?after={results[-1]['username']}") if following.count() > 25 else None,
+        "results": results
+    })
 
 
 @api_view(["PUT"])
