@@ -35,10 +35,6 @@ router.register("profile/memes", api_profile.ProfileMemesViewSet, basename="Meme
 router.register("user_page/memes", api_profile.UserMemesViewSet, basename="Meme")
 router.register("profile/likes", api_profile.ProfileLikesViewSet, basename="Meme")
 router.register("profile/comments", api_profile.ProfileCommentsViewSet, basename="Comment")
-router.register("profile/followers", api_profile.ProfileFollowersViewSet, basename="User")
-router.register("profile/following", api_profile.ProfileFollowingViewSet, basename="User")
-
-# router.register("notifications", api_views.NotificationViewSet, basename="Notification")
 
 urlpatterns = [
     path("", include("memes.urls")),
