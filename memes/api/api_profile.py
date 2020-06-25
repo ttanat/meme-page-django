@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 
@@ -96,6 +96,23 @@ class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
             rt=F("reply_to__user__username"),
             m_uuid=F("meme__uuid")
         ).filter(user=self.request.user, deleted=False).order_by("-id")
+
+
+@api_view(["GET"])
+def follow(request, username):
+    user = request.user
+    if user.username == username:
+        return HttpResponseBadRequest()
+
+    user_to_follow = get_object_or_404(User.objects.only("id"), username=username)
+    is_following = user.follows.filter(id=user_to_follow.id).exists()
+
+    if is_following:
+        user.follows.remove(user_to_follow)    # Unfollow
+    else:
+        user.follows.add(user_to_follow)    # Follow
+
+    return JsonResponse({"following": not is_following})
 
 
 @api_view(["GET"])

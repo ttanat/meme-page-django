@@ -275,23 +275,6 @@ def upload(request):
     return JsonResponse({"success": False, "message": "Error: No file uploaded"})
 
 
-@api_view(["GET"])
-def follow(request, username):
-    user = request.user
-    if user.username == username:
-        return HttpResponseBadRequest()
-
-    user_to_follow = get_object_or_404(User.objects.only("id"), username=username)
-    is_following = user.follows.filter(id=user_to_follow.id).exists()
-
-    if is_following:
-        user.follows.remove(user_to_follow)    # Unfollow
-    else:
-        user.follows.add(user_to_follow)    # Follow
-
-    return JsonResponse({"following": not is_following})
-
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update(request, field):
