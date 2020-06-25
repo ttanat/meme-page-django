@@ -1,15 +1,14 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.utils import timezone
+from django.core.files.base import ContentFile
+from django.core.validators import MaxValueValidator, MinValueValidator
+# from django.contrib.postgres.fields import ArrayField
+
 from secrets import token_urlsafe
-# from .utils import CATEGORIES
 from PIL import Image
 from io import BytesIO
 import os, ffmpeg
-# from django.core.files import File
-from django.core.files.base import ContentFile
-from django.conf import settings
-from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 def set_uuid():
@@ -51,16 +50,22 @@ class User(AbstractUser):
         super().delete(*args, **kwargs)
 
 
+class Following(models.Model):
+    follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="follower")
+    following = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following")
+    date_followed = models.DateTimeField(auto_now_add=True)
+
+
 def user_directory_path(instance, filename):
     return f"users/{instance.user.username}/memes/{set_random_filename(filename)}"
 
 
 def user_directory_path_thumbnails(instance, filename):
-    return f"users/{instance.user.username}/memes/thumbnails/{set_random_filename(filename)}"
+    return f"users/{instance.user.username}/thumbnails/{set_random_filename(filename)}"
 
 
 def user_directory_path_small_thumbnails(instance, filename):
-    return f"users/{instance.user.username}/memes/small_thumbnails/{set_random_filename(filename)}"
+    return f"users/{instance.user.username}/small_thumbnails/{set_random_filename(filename)}"
 
 
 class Meme(models.Model):
@@ -74,13 +79,13 @@ class Meme(models.Model):
     caption = models.CharField(max_length=100, blank=True)
     caption_embedded = models.BooleanField(default=False)
     content_type = models.CharField(max_length=64, blank=False)
-    upload_date = models.DateTimeField(auto_now=False, default=timezone.now)
+    upload_date = models.DateTimeField(auto_now_add=True)
     points = models.IntegerField(default=0)
     num_comments = models.PositiveIntegerField(default=0)
     nsfw = models.BooleanField(default=False)
     category = models.ForeignKey("Category", on_delete=models.SET_NULL, null=True, blank=True)
     tags = models.ManyToManyField("Tag", related_name="memes")
-    # tags_list = models.ArrayField(ArrayField(models.CharField(max_length=64, blank=False), blank=True))
+    # tags_list = ArrayField(models.CharField(max_length=64, blank=False), blank=True)
     ip_address = models.GenericIPAddressField(null=True)
     hidden = models.BooleanField(default=False)
     num_views = models.PositiveIntegerField(default=0)
@@ -183,7 +188,7 @@ def user_directory_path_comments(instance, filename):
 
 
 class Comment(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="comments")
     reply_to = models.ForeignKey("Comment", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
     content = models.CharField(max_length=150, blank=True)
@@ -191,13 +196,13 @@ class Comment(models.Model):
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     points = models.IntegerField(default=0)
     num_replies = models.PositiveIntegerField(default=0)
-    post_date = models.DateTimeField(auto_now=False, default=timezone.now)
+    post_date = models.DateTimeField(auto_now_add=True)
     image = models.ImageField(upload_to=user_directory_path_comments, null=True, blank=True)
     edited = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
 
     class Meta:
-        constraints = [models.CheckConstraint(check=~models.Q(content=None, image=None, deleted=False), name="content_image_both_not_null")]
+        constraints = [models.CheckConstraint(check=~models.Q(content="", image=None, deleted=False), name="content_image_both_not_empty")]
 
     def __str__(self):
         return f"{self.user.username}: {self.content}"
@@ -218,7 +223,7 @@ class Comment(models.Model):
 class Like(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     point = models.IntegerField()
-    liked_on = models.DateTimeField(auto_now=False, default=timezone.now)
+    liked_on = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         abstract = True
@@ -246,115 +251,6 @@ class CommentLike(Like):
 
     def __str__(self):
         return f"{self.user.username} comment {'' if self.point == 1 else 'dis'}like"
-
-
-def page_directory_path(instance, filename):
-    return f"pages/{instance.name}/{set_random_filename(filename)}"
-
-
-class Page(models.Model):
-    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating", through="Moderator")
-    subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="subscriptions")
-    created = models.DateTimeField(auto_now=False, default=timezone.now)
-    name = models.CharField(max_length=32, blank=False, unique=True)
-    display_name = models.CharField(max_length=32, blank=True)
-    image = models.ImageField(upload_to=page_directory_path, null=True, blank=True)
-    cover = models.ImageField(upload_to=page_directory_path, null=True, blank=True)
-    description = models.CharField(max_length=300, blank=True, default="")
-    nsfw = models.BooleanField(default=False)
-    private = models.BooleanField(default=False)
-    # True if subscribers can post / False if only admin can post
-    permissions = models.BooleanField(default=True)
-    num_mods = models.PositiveSmallIntegerField(default=0)
-    num_subscribers = models.PositiveIntegerField(default=0)
-    num_posts = models.PositiveIntegerField(default=0)
-
-    def __str__(self):
-        return f"{self.name}"
-
-    def resize_img(self):
-        img = Image.open(self.image.path)
-        if img.height > 200 or img.width > 200:
-            img.thumbnail((200, 200))
-            img.save(self.image.path)
-
-    def resize_cover(self):
-        cover = Image.open(self.cover.path)
-        if cover.height > 150 or cover.width > 2000:
-            cover.thumbnail((2000, 150))
-            cover.save(self.cover.path)
-
-    def delete(self, *args, **kwargs):
-        self.image.delete()
-        self.cover.delete()
-        super().delete(*args, **kwargs)
-
-
-class Moderator(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    page = models.ForeignKey(Page, on_delete=models.CASCADE)
-    date_joined = models.DateTimeField(auto_now=False, default=timezone.now)
-
-
-class Notification(models.Model):
-    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
-    action = models.CharField(max_length=32, blank=False)
-    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
-    link = models.URLField(max_length=64, blank=False)
-    seen = models.BooleanField(default=False)
-    image = models.URLField(max_length=128, blank=True, default="")
-    message = models.CharField(max_length=128, blank=True)
-    timestamp = models.DateTimeField(auto_now=False, default=timezone.now)
-
-    target_meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=True, blank=True)
-    target_comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True)
-    target_page = models.ForeignKey(Page, on_delete=models.CASCADE, null=True, blank=True)
-
-    class Meta:
-        ordering = ["-id"]
-
-    def __str__(self):
-        return f"{self.message}"
-
-
-class SubscribeRequest(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    page = models.ForeignKey(Page, on_delete=models.CASCADE)
-    timestamp = models.DateTimeField(auto_now=False, default=timezone.now)
-
-    class Meta:
-        ordering = ["id"]
-
-    def __str__(self):
-        return f"{self.user} wants to join {self.page}"
-
-
-def get_invite_link():
-    return token_urlsafe(5)
-
-
-class InviteLink(models.Model):
-    """ Let page admins create links to join their private page """
-    uuid = models.CharField(max_length=7, default=get_invite_link)
-    page = models.ForeignKey(Page, on_delete=models.CASCADE)
-    uses = models.PositiveSmallIntegerField(default=1, validators=[MaxValueValidator(100), MinValueValidator(1)])
-    timestamp = models.DateTimeField(auto_now=False, default=timezone.now)
-
-    def __str__(self):
-        return f"Invite link for {self.page}"
-
-
-class ModeratorInvite(models.Model):
-    invitee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    page = models.ForeignKey(Page, on_delete=models.CASCADE)
-    timestamp = models.DateTimeField(auto_now=False, default=timezone.now)
-
-    class Meta:
-        ordering = ["id"]
-
-    def __str__(self):
-        return f"{self.invitee} invited to moderate for {self.page}"
 
 
 # class Report(models.Model):
