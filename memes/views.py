@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User
 from .utils import UOC, SFT, CATEGORIES
+from analytics.signals import meme_viewed_signal
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -34,8 +35,7 @@ def meme_view(request, uuid):
             "num_comments",
             "user__image",
             "page__private",
-            "page__admin_id",
-            # "num_views"
+            "page__admin_id"
         ),
         uuid=uuid,
         hidden=False
@@ -48,10 +48,7 @@ def meme_view(request, uuid):
                 (meme.page.admin_id != request.user.id and not request.user.subscriptions.filter(id=meme.page_id).exists())):
             return HttpResponse(status=403)
 
-    # if request.user.is_authenticated:
-    #     meme.views.add(request.user)
-    # meme.num_views = F("num_views") + 1
-    # meme.save(update_fields=["num_views"])
+    meme_viewed_signal.send(sender=meme.__class__, user=request.user, meme=meme)
 
     return Response({
         "username": meme.user.username,
