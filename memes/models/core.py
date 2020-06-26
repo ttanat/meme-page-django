@@ -229,9 +229,6 @@ class Like(models.Model):
         abstract = True
         constraints = [models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_point_vote")]
 
-    def __str__(self):
-        return f"{self.user.username} {'meme' if self.meme else 'comment'} {'' if self.point == 1 else 'dis'}like"
-
 
 class MemeLike(Like):
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="likes")
@@ -240,7 +237,7 @@ class MemeLike(Like):
         constraints = [models.UniqueConstraint(fields=["user", "meme"], name="unique_meme_vote")]
 
     def __str__(self):
-        return f"{self.user.username} meme {'' if self.point == 1 else 'dis'}like"
+        return f"{self.user.username} meme {self.meme_id} {'' if self.point == 1 else 'dis'}like"
 
 
 class CommentLike(Like):
@@ -250,7 +247,7 @@ class CommentLike(Like):
         constraints = [models.UniqueConstraint(fields=["user", "comment"], name="unique_comment_vote")]
 
     def __str__(self):
-        return f"{self.user.username} comment {'' if self.point == 1 else 'dis'}like"
+        return f"{self.user.username} comment {self.comment_id} {'' if self.point == 1 else 'dis'}like"
 
 
 # class Report(models.Model):
