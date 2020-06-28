@@ -1,5 +1,8 @@
 from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
+from django.http import QueryDict
+from django.utils.dateparse import parse_datetime
+# from django.utils import timezone
 
 from .serializers import *
 from .models import *
@@ -11,14 +14,28 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotAuthenticated, ParseError, PermissionDenied, NotFound
 
 from re import findall
+from urllib.parse import urlencode
 
 
 class MemePagination(pagination.PageNumberPagination):
     page_size = 20
 
     def get_paginated_response(self, data):
+        # Add "before" query param to prevent selecting duplicate memes
+        # e.g. new memes uploaded before loading next page will cause duplicates
+        if (self.get_next_link()
+                and self.request.query_params.get("p")
+                    and "before" not in self.request.query_params
+                        and "page" not in self.request.query_params):
+            # Get upload date of first meme
+            upload_date = Meme.objects.values_list("upload_date", flat=True).get(uuid=data[0]["uuid"])
+            # Add "before" query param to next link
+            nxt = f"{self.get_next_link()}&{urlencode({'before': upload_date})}"
+        else:
+            nxt = self.get_next_link()
+
         return Response({
-            "next": self.get_next_link(),
+            "next": nxt,
             "results": data
         })
 
@@ -36,6 +53,10 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
 
         pathname = self.request.query_params.get("p", "")
 
+        # Get memes before certain datetime
+        if pathname and "before" in self.request.query_params:
+            memes = memes.filter(upload_date__lte=parse_datetime(self.request.query_params["before"]))
+
         # Don't show page name in container header if user is in a meme page
         if not pathname.startswith("page/"):
             memes = memes.annotate(pname=F("page__name"), pdname=F("page__display_name"))
@@ -46,7 +67,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
 
         if not pathname:
             return memes    # Currently just showing all memes
-            # return memes.filter(uploaded__gte=timezone.now()-timedelta(3)).order_by("points")
+            # return memes.filter(upload_date__gte=timezone.now()-timedelta(3)).order_by("points")
 
         elif pathname == "feed":
             # Show memes from followed users and subscribed pages
