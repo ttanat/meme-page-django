@@ -17,13 +17,17 @@ from re import findall
 from urllib.parse import urlencode
 
 
+def add_before_query_param(self_):
+    """ Check if should add "before" query parameter """
+    return self_.get_next_link() and "before" not in self_.request.query_params and "page" not in self_.request.query_params
+
+
 def get_next_meme_link(self_, uuid):
     """
     Add "before" query param to prevent duplicates
-    e.g. new memes uploaded or new comments posted before loading next page will cause duplicates
+    e.g. new memes uploaded before loading next page will cause duplicates
     """
-    if (self_.get_next_link() and self_.request.query_params.get("p")
-            and "before" not in self_.request.query_params and "page" not in self_.request.query_params):
+    if self_.request.query_params.get("p") and add_before_query_param(self_):
         # Get upload or post date of first object
         before = Meme.objects.values_list("upload_date", flat=True).get(uuid=uuid)
         # Add "before" query param to next link
@@ -33,7 +37,7 @@ def get_next_meme_link(self_, uuid):
 
 
 class MemePagination(pagination.PageNumberPagination):
-    page_size = 20
+    page_size = 1
 
     def get_paginated_response(self, data):
         return Response({
@@ -134,12 +138,17 @@ class PrivateMemeViewSet(viewsets.ReadOnlyModelViewSet):
         return Meme.objects.annotate(username=F("user__username")).filter(page=page, hidden=False)
 
 
+def get_next_comment_link(self_, datetime):
+    return f"{self_.get_next_link()}&{urlencode({'before': datetime})}" \
+           if add_before_query_param(self_) else self_.get_next_link()
+
+
 class CommentPagination(pagination.PageNumberPagination):
     page_size = 20
 
     def get_paginated_response(self, data):
         return Response({
-            "next": self.get_next_link(),
+            "next": get_next_comment_link(self, data[0]["post_date"]),
             "results": data
         })
 
@@ -155,8 +164,11 @@ class CommentViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        return Comment.objects.annotate(username=F("user__username")) \
-                              .filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
+        comments = Comment.objects.annotate(username=F("user__username")) \
+                                  .filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
+
+        return comments.filter(post_date__lte=parse_datetime(self.request.query_params["before"])) \
+               if "before" in self.request.query_params else comments
 
 
 class CommentFullViewSet(CommentViewSet):
@@ -173,6 +185,12 @@ class CommentFullViewSet(CommentViewSet):
 
 class ReplyPagination(CommentPagination):
     page_size = 10
+
+    def get_paginated_response(self, data):
+        return Response({
+            "next": self.get_next_link(),
+            "results": data
+        })
 
 
 class ReplyViewSet(viewsets.ReadOnlyModelViewSet):
