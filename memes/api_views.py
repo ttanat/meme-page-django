@@ -17,25 +17,27 @@ from re import findall
 from urllib.parse import urlencode
 
 
+def get_next_meme_link(self_, uuid):
+    """
+    Add "before" query param to prevent duplicates
+    e.g. new memes uploaded or new comments posted before loading next page will cause duplicates
+    """
+    if (self_.get_next_link() and self_.request.query_params.get("p")
+            and "before" not in self_.request.query_params and "page" not in self_.request.query_params):
+        # Get upload or post date of first object
+        before = Meme.objects.values_list("upload_date", flat=True).get(uuid=uuid)
+        # Add "before" query param to next link
+        return f"{self_.get_next_link()}&{urlencode({'before': before})}"
+
+    return self_.get_next_link()
+
+
 class MemePagination(pagination.PageNumberPagination):
     page_size = 20
 
     def get_paginated_response(self, data):
-        # Add "before" query param to prevent selecting duplicate memes
-        # e.g. new memes uploaded before loading next page will cause duplicates
-        if (self.get_next_link()
-                and self.request.query_params.get("p")
-                    and "before" not in self.request.query_params
-                        and "page" not in self.request.query_params):
-            # Get upload date of first meme
-            upload_date = Meme.objects.values_list("upload_date", flat=True).get(uuid=data[0]["uuid"])
-            # Add "before" query param to next link
-            nxt = f"{self.get_next_link()}&{urlencode({'before': upload_date})}"
-        else:
-            nxt = self.get_next_link()
-
         return Response({
-            "next": nxt,
+            "next": get_next_meme_link(self, data[0]["uuid"]),
             "results": data
         })
 
