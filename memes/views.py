@@ -35,7 +35,8 @@ def meme_view(request, uuid):
             "num_comments",
             "user__image",
             "page__private",
-            "page__admin_id"
+            "page__admin_id",
+            "num_views"
         ),
         uuid=uuid,
         hidden=False
