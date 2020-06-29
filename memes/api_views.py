@@ -37,11 +37,11 @@ def get_next_meme_link(self_, uuid):
 
 
 class MemePagination(pagination.PageNumberPagination):
-    page_size = 1
+    page_size = 20
 
     def get_paginated_response(self, data):
         return Response({
-            "next": get_next_meme_link(self, data[0]["uuid"]),
+            "next": get_next_meme_link(self, data[0]["uuid"]) if data else None,
             "results": data
         })
 
@@ -148,7 +148,7 @@ class CommentPagination(pagination.PageNumberPagination):
 
     def get_paginated_response(self, data):
         return Response({
-            "next": get_next_comment_link(self, data[0]["post_date"]),
+            "next": get_next_comment_link(self, data[0]["post_date"]) if data else None,
             "results": data
         })
 
