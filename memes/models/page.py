@@ -29,6 +29,7 @@ class Page(models.Model):
     num_mods = models.PositiveSmallIntegerField(default=0)
     num_subscribers = models.PositiveIntegerField(default=0)
     num_posts = models.PositiveIntegerField(default=0)
+    num_views = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.name}"
