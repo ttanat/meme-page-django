@@ -254,7 +254,7 @@ def upload(request):
             user=request.user,
             username=request.user.username,
             page=page,
-            page_private=page.private if page else False,
+            private_page=page.private if page else False,
             file=file,
             caption=caption,
             caption_embedded=c_embedded,

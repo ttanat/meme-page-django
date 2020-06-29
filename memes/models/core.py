@@ -73,7 +73,7 @@ class Meme(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     username = models.CharField(max_length=32, blank=False)
     page = models.ForeignKey("Page", on_delete=models.SET_NULL, null=True, blank=True)
-    page_private = models.BooleanField()
+    private_page = models.BooleanField()
 
     file = models.FileField(upload_to=user_directory_path, null=False, blank=False)
     thumbnail = models.FileField(upload_to=user_directory_path_thumbnails, null=True, blank=True)
