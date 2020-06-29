@@ -187,6 +187,9 @@ class Meme(models.Model):
 class Tag(models.Model):
     name = models.CharField(max_length=64, unique=True, blank=False)
 
+    class Meta:
+        constraints = [CheckConstraint(check=Q(name__regex="^[a-zA-Z][a-zA-Z0-9_]*$"), name="tag_chars_valid")]
+
     def __str__(self):
         return f"{self.name}"
 
