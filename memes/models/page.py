@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from django.core.validators import MaxValueValidator, MinValueValidator
 
 from secrets import token_urlsafe
 from PIL import Image
@@ -104,8 +103,11 @@ class InviteLink(models.Model):
     """ Let page admins create links to join their private page """
     uuid = models.CharField(max_length=7, default=get_invite_link)
     page = models.ForeignKey(Page, on_delete=models.CASCADE)
-    uses = models.PositiveSmallIntegerField(default=1, validators=[MaxValueValidator(100), MinValueValidator(1)])
+    uses = models.PositiveSmallIntegerField(default=1)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(check=models.Q(uses__lte=100)&models.Q(uses__gt=0), name="invite_link_use_limit")]
 
     def __str__(self):
         return f"Invite link for {self.page}"

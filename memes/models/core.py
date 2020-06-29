@@ -3,7 +3,6 @@ from django.db.models import Q, CheckConstraint, UniqueConstraint
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.files.base import ContentFile
-from django.core.validators import MaxValueValidator, MinValueValidator
 # from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 
