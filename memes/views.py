@@ -100,9 +100,9 @@ def get_likes(request, obj):
         return JsonResponse([], safe=False)
 
     if obj == "m":
-        return Response(MemeLike.objects.filter(user=request.user, meme__uuid__in=uuids).annotate(uuid=F("meme__uuid")).values("uuid", "point"))
+        return Response(MemeLike.objects.filter(user=request.user, meme__uuid__in=uuids).values("uuid", "point"))
     elif obj == "c":
-        return Response(CommentLike.objects.filter(user=request.user, comment__uuid__in=uuids).annotate(uuid=F("comment__uuid")).values("uuid", "point"))
+        return Response(CommentLike.objects.filter(user=request.user, comment__uuid__in=uuids).values("uuid", "point"))
 
     raise Http404
 
