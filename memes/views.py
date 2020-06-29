@@ -120,16 +120,16 @@ def like(request):
 
     if type_ == "m":
         if request.method == "PUT":
-            meme = get_object_or_404(Meme, uuid=uuid)
-            obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, defaults={"point": point})
+            meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
+            obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, uuid=uuid, defaults={"point": point})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
             MemeLike.objects.filter(user=request.user, meme__uuid=uuid).delete()
             return HttpResponse(status=204)
     elif type_ == "c":
         if request.method == "PUT":
-            comment = get_object_or_404(Comment.objects.prefetch_related("meme"), uuid=uuid)
-            obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, defaults={"point": point})
+            comment = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
+            obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, uuid=uuid, defaults={"point": point})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
             CommentLike.objects.filter(user=request.user, comment__uuid=uuid).delete()
