@@ -155,6 +155,7 @@ def comment(request, action):
 
         comment = Comment.objects.create(
             user=request.user,
+            username=request.user.username,
             meme=meme,
             content=content,
             image=image
@@ -206,6 +207,7 @@ def reply(request):
 
     new_reply = Comment.objects.create(
         user=request.user,
+        username=request.user.username,
         meme=reply_to.meme,
         reply_to=reply_to,
         content=content,
@@ -250,6 +252,7 @@ def upload(request):
 
         meme = Meme.objects.create(
             user=request.user,
+            username=request.user.username,
             page=page,
             file=file,
             caption=caption,

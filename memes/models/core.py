@@ -70,6 +70,7 @@ def user_directory_path_small_thumbnails(instance, filename):
 
 class Meme(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    username = models.CharField(max_length=32, blank=False)
     page = models.ForeignKey("Page", on_delete=models.SET_NULL, null=True, blank=True)
     file = models.FileField(upload_to=user_directory_path, null=False, blank=False)
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
@@ -189,6 +190,7 @@ def user_directory_path_comments(instance, filename):
 
 class Comment(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    username = models.CharField(max_length=32, blank=False)
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="comments")
     reply_to = models.ForeignKey("Comment", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
     content = models.CharField(max_length=150, blank=True)
