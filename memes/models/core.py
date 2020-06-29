@@ -79,11 +79,19 @@ class Meme(models.Model):
     thumbnail = models.FileField(upload_to=user_directory_path_thumbnails, null=True, blank=True)
     small_thumbnail = models.FileField(upload_to=user_directory_path_small_thumbnails, null=True, blank=True)
 
+    class ContentType(models.TextChoices):
+        JPEG = "image/jpeg", _("JPEG")
+        PNG = "image/png", _("PNG")
+        GIF = "image/gif", _("GIF")
+        MP4 = "video/mp4", _("MP4")
+        MOV = "video/quicktime", _("MOV")
+
+    content_type = models.CharField(max_length=16, blank=False, choices=ContentType.choices)
+
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     dank = models.BooleanField(default=False)
     caption = models.CharField(max_length=100, blank=True)
     caption_embedded = models.BooleanField(default=False)
-    content_type = models.CharField(max_length=64, blank=False)
     upload_date = models.DateTimeField(auto_now_add=True)
     points = models.IntegerField(default=0)
     num_comments = models.PositiveIntegerField(default=0)

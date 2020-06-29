@@ -2,7 +2,6 @@ from django.http import HttpResponse, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 
 from memes.models import User, Page
-from memes.utils import SFT
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -32,7 +31,7 @@ def user_settings(request):
                 return HttpResponseBadRequest()
 
             new_img = request.FILES["image"]
-            if new_img.content_type not in SFT[:2]:
+            if new_img.content_type not in ("image/jpeg", "image/png"):
                 return HttpResponseBadRequest("Supported media types: JPEG, PNG")
 
             user.image.delete()

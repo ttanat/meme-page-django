@@ -5,7 +5,7 @@ from django.utils import timezone
 # from django.views.decorators.cache import cache_page
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User
-from .utils import UOC, SFT
+from .utils import UOC
 from analytics.signals import meme_viewed_signal
 
 from rest_framework.decorators import api_view, permission_classes
@@ -236,7 +236,8 @@ def upload(request):
             # category = get_object_or_404(Category, name=category_name)
             category = Category.objects.get_or_create(name=category_name)[0]    # Change this before deployment
 
-        if content_type not in SFT or (content_type == "video/quicktime" and not file.name.endswith(".mov")):
+        if (content_type not in Meme.ContentType.values
+                or (content_type == "video/quicktime" and not file.name.endswith(".mov"))):
             return JsonResponse({"success": False, "message": "Unsupported file type"})
 
         if page_name:
