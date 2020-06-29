@@ -17,6 +17,7 @@ class Page(models.Model):
     moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating", through="Moderator")
     subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="subscriptions")
     created = models.DateTimeField(auto_now_add=True)
+
     name = models.CharField(max_length=32, blank=False, unique=True)
     display_name = models.CharField(max_length=32, blank=True)
     image = models.ImageField(upload_to=page_directory_path, null=True, blank=True)
@@ -26,10 +27,14 @@ class Page(models.Model):
     private = models.BooleanField(default=False)
     # True if subscribers can post / False if only admin can post
     permissions = models.BooleanField(default=True)
+
     num_mods = models.PositiveSmallIntegerField(default=0)
     num_subscribers = models.PositiveIntegerField(default=0)
     num_posts = models.PositiveIntegerField(default=0)
     num_views = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.CheckConstraint(check=models.Q(name__regex="^[a-zA-Z0-9_]+$"), name="page_name_chars_valid")]
 
     def __str__(self):
         return f"{self.name}"

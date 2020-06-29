@@ -5,7 +5,6 @@ from django.utils import timezone
 # from django.views.decorators.cache import cache_page
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User
-from .utils import UOC
 from analytics.signals import meme_viewed_signal
 
 from rest_framework.decorators import api_view, permission_classes

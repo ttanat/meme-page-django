@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q, CheckConstraint, UniqueConstraint
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.files.base import ContentFile
@@ -234,7 +235,7 @@ class Comment(models.Model):
     deleted = models.BooleanField(default=False)
 
     class Meta:
-        constraints = [models.CheckConstraint(check=~models.Q(content="", image=None, deleted=False), name="content_image_both_not_empty")]
+        constraints = [CheckConstraint(check=~Q(content="", image=None, deleted=False), name="content_image_both_not_empty")]
 
     def __str__(self):
         return f"{self.user.username}: {self.content}"
@@ -259,14 +260,14 @@ class Like(models.Model):
 
     class Meta:
         abstract = True
-        constraints = [models.CheckConstraint(check=models.Q(point=1)|models.Q(point=-1), name="single_point_vote")]
+        constraints = [CheckConstraint(check=Q(point=1)|Q(point=-1), name="single_point_vote")]
 
 
 class MemeLike(Like):
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="likes")
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "meme"], name="unique_meme_vote")]
+        constraints = [UniqueConstraint(fields=["user", "meme"], name="unique_meme_vote")]
 
     def __str__(self):
         return f"{self.user.username} meme {self.meme_id} {'' if self.point == 1 else 'dis'}like"
@@ -276,7 +277,7 @@ class CommentLike(Like):
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=False, blank=False, related_name="comment_likes")
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "comment"], name="unique_comment_vote")]
+        constraints = [UniqueConstraint(fields=["user", "comment"], name="unique_comment_vote")]
 
     def __str__(self):
         return f"{self.user.username} comment {self.comment_id} {'' if self.point == 1 else 'dis'}like"

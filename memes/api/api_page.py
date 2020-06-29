@@ -4,12 +4,13 @@ from django.db.models import F, Q
 from django.db import transaction
 
 from memes.models import Page, SubscribeRequest, User, InviteLink
-from memes.utils import UOC
 
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+import re
 
 
 @api_view(["GET"])
@@ -236,7 +237,7 @@ def new_page(request):
 
     if not name:
         return JsonResponse({"success": False})
-    elif any(c not in UOC for c in name):
+    elif not re.search("^[a-zA-Z0-9_]+$", name):
         return JsonResponse({"success": False, "message": "Letters, numbers, and underscores only"})
     elif Page.objects.filter(name__iexact=name).exists():
         return JsonResponse({"success": False, "taken": True})

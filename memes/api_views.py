@@ -6,14 +6,13 @@ from django.utils.dateparse import parse_datetime
 
 from .serializers import *
 from .models import *
-from .utils import UOC, CATEGORIES
 
 from rest_framework import viewsets, pagination, filters
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotAuthenticated, ParseError, PermissionDenied, NotFound
 
-from re import findall
+import re
 from urllib.parse import urlencode
 
 
@@ -90,7 +89,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         elif pathname.startswith("page/"):
             pname = pathname.partition("page/")[2]
 
-            if not pname or any(c not in UOC for c in pname):
+            if not pname or not re.search("^[a-zA-Z0-9_]+$", pname):
                 raise NotFound
 
             return memes.filter(page__name=pname)
@@ -106,7 +105,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         elif pathname == "search":
             query = self.request.query_params.get("q", "")[:64].strip()
             if query:
-                tags = findall("#([a-zA-Z][a-zA-Z0-9_]*)", query)
+                tags = re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", query)
                 if tags:
                     q = Q()
                     for tag in tags:

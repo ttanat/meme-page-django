@@ -4,7 +4,6 @@ from django.db.models import F, Q
 # from django.views.decorators.cache import cache_page
 
 from memes.models import Page, User
-from memes.utils import UOC
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -58,7 +57,7 @@ def register(request):
         return JsonResponse({"message": f"{error} cannot be blank", "field": error[0].lower()})
     if len(username) > 32:
         return JsonResponse({"message": "Maximum 32 characters", "field": "u"})
-    if any(c not in UOC for c in username):
+    if not re.search("^[a-zA-Z0-9_]+$", username):
         return JsonResponse({"message": "Invalid username", "field": "u"})
     if not re.search("^\S+@\S+\.[a-zA-Z]+$", email):
         return JsonResponse({"message": "Please enter a valid email", "field": "e"})
