@@ -98,7 +98,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         elif pathname.startswith("browse/"):
             category_name = pathname.partition("browse/")[2]
 
-            if category_name not in CATEGORIES:
+            if category_name not in Category.Name.values:
                 raise NotFound
 
             return memes.filter(category__name=category_name)
