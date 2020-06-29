@@ -258,7 +258,7 @@ class Comment(models.Model):
 class Like(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     point = models.IntegerField()
-    liked_on = models.DateTimeField(auto_now_add=True)
+    liked_on = models.DateTimeField(auto_now=True)
     # UUID of meme or comment
     uuid = models.CharField(max_length=11, blank=False)
 

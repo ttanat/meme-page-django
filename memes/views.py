@@ -1,7 +1,6 @@
 from django.http import HttpResponse, Http404, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
-from django.utils import timezone
 # from django.views.decorators.cache import cache_page
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User
@@ -122,7 +121,7 @@ def like(request):
     if type_ == "m":
         if request.method == "PUT":
             meme = get_object_or_404(Meme, uuid=uuid)
-            obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, defaults={"point": point, "liked_on": timezone.now()})
+            obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, defaults={"point": point})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
             MemeLike.objects.filter(user=request.user, meme__uuid=uuid).delete()
@@ -130,7 +129,7 @@ def like(request):
     elif type_ == "c":
         if request.method == "PUT":
             comment = get_object_or_404(Comment.objects.prefetch_related("meme"), uuid=uuid)
-            obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, defaults={"point": point, "liked_on": timezone.now()})
+            obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, defaults={"point": point})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
             CommentLike.objects.filter(user=request.user, comment__uuid=uuid).delete()
