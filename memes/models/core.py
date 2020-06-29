@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.files.base import ContentFile
 from django.core.validators import MaxValueValidator, MinValueValidator
 # from django.contrib.postgres.fields import ArrayField
+from django.utils.translation import gettext_lazy as _
 
 from secrets import token_urlsafe
 from PIL import Image
@@ -34,7 +35,6 @@ class User(AbstractUser):
     image = models.ImageField(upload_to=user_directory_path_profile, null=True, blank=True)
     nsfw = models.BooleanField(default=False)
     show_nsfw = models.BooleanField(default=False)
-    private = models.BooleanField(default=False)
     num_views = models.PositiveIntegerField(default=0)
 
     def __str__(self):
@@ -66,17 +66,20 @@ def user_directory_path_thumbnails(instance, filename):
 
 
 def user_directory_path_small_thumbnails(instance, filename):
-    return f"users/{instance.user.username}/small_thumbnails/{set_random_filename(filename)}"
+    return f"users/{instance.user.username}/sm_thumbnails/{set_random_filename(filename)}"
 
 
 class Meme(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     username = models.CharField(max_length=32, blank=False)
     page = models.ForeignKey("Page", on_delete=models.SET_NULL, null=True, blank=True)
+    page_private = models.BooleanField()
+
     file = models.FileField(upload_to=user_directory_path, null=False, blank=False)
-    uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     thumbnail = models.FileField(upload_to=user_directory_path_thumbnails, null=True, blank=True)
     small_thumbnail = models.FileField(upload_to=user_directory_path_small_thumbnails, null=True, blank=True)
+
+    uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     dank = models.BooleanField(default=False)
     caption = models.CharField(max_length=100, blank=True)
     caption_embedded = models.BooleanField(default=False)
@@ -88,9 +91,10 @@ class Meme(models.Model):
     category = models.ForeignKey("Category", on_delete=models.SET_NULL, null=True, blank=True)
     tags = models.ManyToManyField("Tag", related_name="memes")
     # tags_list = ArrayField(models.CharField(max_length=64, blank=False), blank=True)
+
+    num_views = models.PositiveIntegerField(default=0)
     ip_address = models.GenericIPAddressField(null=True)
     hidden = models.BooleanField(default=False)
-    num_views = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-id"]
@@ -179,7 +183,24 @@ class Tag(models.Model):
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=64)
+
+    class Name(models.TextChoices):
+        MOVIES = "movies", _("Movies")
+        TV = "tv", _("TV")
+        GAMING = "gaming", _("Gaming")
+        ANIMALS = "animals", _("Animals")
+        INTERNET = "internet", _("Internet")
+        SCHOOL = "school", _("School")
+        ANIME = "anime", _("Anime")
+        CELEBRITIES = "celebrities", _("Celebrities")
+        SPORTS = "sports", _("Sports")
+        FOOTBALL = "football", _("Football")
+        NBA = "nba", _("NBA")
+        NFL = "nfl", _("NFL")
+        NEWS = "news", _("News")
+        UNIVERSITY = "university", _("University")
+
+    name = models.CharField(max_length=32, choices=Name.choices)
 
     def __str__(self):
         return f"{self.name}"
