@@ -51,7 +51,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = MemePagination
 
     def get_queryset(self):
-        memes = Meme.objects.annotate(username=F("user__username")).filter(hidden=False)
+        memes = Meme.objects.filter(hidden=False)
 
         if (not self.request.user.is_authenticated or
                 (self.request.user.is_authenticated and not self.request.user.show_nsfw)):
@@ -135,7 +135,7 @@ class PrivateMemeViewSet(viewsets.ReadOnlyModelViewSet):
                     and not page.moderators.filter(id=self.request.user.id).exists()):
             raise PermissionDenied
 
-        return Meme.objects.annotate(username=F("user__username")).filter(page=page, hidden=False)
+        return Meme.objects.filter(page=page, hidden=False)
 
 
 def get_next_comment_link(self_, datetime):
@@ -164,8 +164,7 @@ class CommentViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        comments = Comment.objects.annotate(username=F("user__username")) \
-                                  .filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
+        comments = Comment.objects.filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
 
         return comments.filter(post_date__lte=parse_datetime(self.request.query_params["before"])) \
                if "before" in self.request.query_params else comments
@@ -179,8 +178,7 @@ class CommentFullViewSet(CommentViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        return Comment.objects.annotate(username=F("user__username")) \
-                              .filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
+        return Comment.objects.filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
 
 
 class ReplyPagination(CommentPagination):
@@ -201,7 +199,7 @@ class ReplyViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        return Comment.objects.annotate(username=F("user__username")).filter(reply_to__uuid=self.request.query_params["u"]).order_by("id")
+        return Comment.objects.filter(reply_to__uuid=self.request.query_params["u"]).order_by("id")
 
 
 class SearchListPagination(pagination.PageNumberPagination):
