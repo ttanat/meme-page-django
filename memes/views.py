@@ -240,7 +240,7 @@ def upload(request):
             return JsonResponse({"success": False, "message": "Unsupported file type"})
 
         if page_name:
-            page = get_object_or_404(Page.objects.only("admin_id", "permissions"), name=page_name)
+            page = get_object_or_404(Page.objects.only("admin_id", "private", "permissions"), name=page_name)
             # User must be admin or subscriber or moderator to post to page
             if not (page.admin_id == request.user.id
                         or (page.permissions and page.subscribers.filter(id=request.user.id).exists())
@@ -254,6 +254,7 @@ def upload(request):
             user=request.user,
             username=request.user.username,
             page=page,
+            page_private=page.private if page else False,
             file=file,
             caption=caption,
             caption_embedded=c_embedded,
