@@ -9,7 +9,10 @@ from django.utils.translation import gettext_lazy as _
 from secrets import token_urlsafe
 from PIL import Image
 from io import BytesIO
-import os, ffmpeg
+import os, ffmpeg, boto3, json
+
+
+client = boto3.client('lambda', region_name=settings.AWS_S3_REGION_NAME)
 
 
 def set_uuid():
@@ -40,11 +43,13 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username}"
 
-    def resize_img(self):
-        img = Image.open(self.image.path)
-        if img.height > 200 or img.width > 200:
-            img.thumbnail((200, 200))
-            img.save(self.image.path)
+    def resize_image(self):
+        client.invoke(
+            FunctionName="resize_profile_pic",
+            InvocationType="Event",
+            Payload=json.dumps({"name": self.image.name}),
+            Qualifier="$LATEST"
+        )
 
     def delete(self, *args, **kwargs):
         self.image.delete()
