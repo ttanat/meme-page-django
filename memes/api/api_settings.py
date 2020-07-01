@@ -36,7 +36,7 @@ def user_settings(request):
 
             user.image.delete()
             user.image.save(new_img.name, new_img)
-            user.resize_img()
+            user.resize_image()
 
         elif field == "nsfw":
             user.show_nsfw = request.POST.get("show_nsfw") == "true"
@@ -122,7 +122,7 @@ class PageSettings(APIView):
                 img = request.FILES["image"]
                 page.image.delete()
                 page.image.save(img.name, img)
-                page.resize_img()
+                page.resize_image()
             elif "cover" in request.FILES:
                 page = self.get_object(request.user, name, ("name", "cover"))
                 cover = request.FILES["cover"]

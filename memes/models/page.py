@@ -38,7 +38,7 @@ class Page(models.Model):
     def __str__(self):
         return f"{self.name}"
 
-    def resize_img(self):
+    def resize_image(self):
         img = Image.open(self.image.path)
         if img.height > 200 or img.width > 200:
             img.thumbnail((200, 200))
