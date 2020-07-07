@@ -62,16 +62,8 @@ class Following(models.Model):
     date_followed = models.DateTimeField(auto_now_add=True)
 
 
-def user_directory_path(instance, filename):
-    return f"users/{instance.user.username}/memes/{set_random_filename(filename)}"
-
-
-def user_directory_path_thumbnails(instance, filename):
-    return f"users/{instance.user.username}/thumbnails/{set_random_filename(filename)}"
-
-
-def user_directory_path_small_thumbnails(instance, filename):
-    return f"users/{instance.user.username}/sm_thumbnails/{set_random_filename(filename)}"
+def original_meme_path(instance, filename):
+    return f"users/{instance.user.username}/memes/original/{set_random_filename(filename)}"
 
 
 class Meme(models.Model):
@@ -80,9 +72,18 @@ class Meme(models.Model):
     page = models.ForeignKey("Page", on_delete=models.SET_NULL, null=True, blank=True)
     private_page = models.BooleanField()
 
-    file = models.FileField(upload_to=user_directory_path, null=False, blank=False)
-    thumbnail = models.FileField(upload_to=user_directory_path_thumbnails, null=True, blank=True)
-    small_thumbnail = models.FileField(upload_to=user_directory_path_small_thumbnails, null=True, blank=True)
+    # Store original file
+    original = models.FileField(upload_to=original_meme_path, null=False, blank=False)
+
+    # Full size (960x960) for desktop (WEBP/MP4)
+    large = models.FileField(null=True, blank=True)
+    # Medium size (640x640) for mobile (WEBP/MP4)
+    medium = models.FileField(null=True, blank=True)
+
+    # Thumbnail (480x480) for profile and video and gif memes (WEBP)
+    thumbnail = models.ImageField(null=True, blank=True)
+    # Small thumbnail (320x320) for mobile thumbnails (WEBP)
+    small_thumbnail = models.ImageField(null=True, blank=True)
 
     class ContentType(models.TextChoices):
         JPEG = "image/jpeg", _("JPEG")
@@ -91,7 +92,7 @@ class Meme(models.Model):
         MP4 = "video/mp4", _("MP4")
         MOV = "video/quicktime", _("MOV")
 
-    content_type = models.CharField(max_length=16, blank=False, choices=ContentType.choices)
+    content_type = models.CharField(max_length=15, blank=False, choices=ContentType.choices)
 
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     dank = models.BooleanField(default=False)
@@ -115,76 +116,34 @@ class Meme(models.Model):
     def __str__(self):
         return f"{self.id}"
 
-    def resize_file(self):
-        if self.content_type in ("image/jpeg", "image/png"):
-            self.resize_image()
-        else:
-            # Videos and GIFs get processed here
-            self.resize_video()
+    # def resize_video(self):
+    #     old_path = self.file.path
+    #     path_to_dir = os.path.split(old_path)[0]
+    #     new_path = os.path.join(path_to_dir, f"{set_uuid()}.mp4")
 
-    def resize_image(self):
-        if self.file.size > 51200:
-            img = Image.open(self.file.path).convert("RGB")
-            icc_profile = img.info.get("icc_profile")
-            if img.height > 960 or img.width > 960:
-                img.thumbnail((960, 960))
+    #     self.file.name = f"{os.path.split(self.file.name)[0]}/{new_fname}"
 
-            if self.content_type == "image/jpeg":
-                img.save(self.file.path, icc_profile=icc_profile, optimize=True, quality=70, format="JPEG")
-            else:
-                new_path = f"{os.path.splitext(self.file.path)[0]}.jpg"
-                fname = os.path.split(new_path)[1]
-                f = BytesIO()
-                img.save(f, icc_profile=icc_profile, optimize=True, quality=70, format="JPEG")
-                if f.tell() < self.file.size:
-                    self.file.delete()
-                    self.file.save(fname, ContentFile(f.getvalue()))
-                f.close()
+    #     file = ffmpeg.input(old_path)
+    #     if self.content_type == "image/gif":
+    #         file.output(new_path, movflags="faststart", video_bitrate="0", crf="25", format="mp4", vcodec="libx264", pix_fmt="yuv420p", vf="scale=trunc(iw/2)*2:trunc(ih/2)*2")
+    #     elif self.content_type[:6] == "video/" and self.file.size > 102400:    # Resize if video is more than 100 kb
+    #         file.output(new_path, movflags="faststart", vcodec="libx264", crf="33", format="mp4", pix_fmt="yuv420p")
+    #     file.run()
 
-            if img.height > 480 or img.width > 480:
-                # Create thumbnail
-                img.thumbnail((480, 480))
-                f = BytesIO()
-                img.save(f, icc_profile=icc_profile, optimize=True, quality=70, format="JPEG")
-                name, ext = os.path.splitext(os.path.split(self.file.path)[1])
-                self.thumbnail.save(f"{name}_t{ext}", ContentFile(f.getvalue()))
-                f.close()
+    #     if self.content_type == "video/quicktime":
+    #         self.content_type = "video/mp4"
+    #         self.save(update_fields=("file", "content_type"))
+    #     else:
+    #         self.save(update_fields=["file"])
 
-                # Create small thumbnail
-                f = BytesIO()
-                img.thumbnail((240, 240))
-                img.save(f, icc_profile=icc_profile, optimize=True, quality=70, format="JPEG")
-                self.small_thumbnail.save(f"{name}_st{ext}", ContentFile(f.getvalue()))
-                f.close()
-
-            img.close()
-
-    def resize_video(self):
-        old_path = self.file.path
-        path_to_dir = os.path.split(old_path)[0]
-        new_path = os.path.join(path_to_dir, f"{set_uuid()}.mp4")
-
-        self.file.name = f"{os.path.split(self.file.name)[0]}/{new_fname}"
-
-        file = ffmpeg.input(old_path)
-        if self.content_type == "image/gif":
-            file.output(new_path, movflags="faststart", video_bitrate="0", crf="25", format="mp4", vcodec="libx264", pix_fmt="yuv420p", vf="scale=trunc(iw/2)*2:trunc(ih/2)*2")
-        elif self.content_type[:6] == "video/" and self.file.size > 102400:    # Resize if video is more than 100 kb
-            file.output(new_path, movflags="faststart", vcodec="libx264", crf="33", format="mp4", pix_fmt="yuv420p")
-        file.run()
-
-        if self.content_type == "video/quicktime":
-            self.content_type = "video/mp4"
-            self.save(update_fields=("file", "content_type"))
-        else:
-            self.save(update_fields=["file"])
-
-        os.remove(old_path)
+    #     os.remove(old_path)
 
     def delete(self, *args, **kwargs):
-        self.small_thumbnail.delete()
+        self.original.delete()
+        self.large.delete()
+        self.medium.delete()
         self.thumbnail.delete()
-        self.file.delete()
+        self.small_thumbnail.delete()
         super().delete(*args, **kwargs)
 
 
