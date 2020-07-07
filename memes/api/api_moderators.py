@@ -168,9 +168,16 @@ def remove_meme_from_page(request, uuid):
         meme.private_page = False
         meme.save(update_fields=("page", "private_page"))
 
+        # Subtract one from total number of posts on page
         meme.page.num_posts = F("num_posts") - 1
         meme.page.save(update_fields=["num_posts"])
 
+        # Restore comments removed by moderator of page
+        meme.comments.filter(deleted=2).update(deleted=0)
+
         return HttpResponse()
 
-    return HttpResponse("Cannot remove admin's memes", status=403) if meme.user_id == meme.page.admin_id else HttpResponseBadRequest()
+    if meme.user_id == meme.page.admin_id:
+        return HttpResponse("Cannot remove admin's memes", status=403)
+
+    return HttpResponseBadRequest()

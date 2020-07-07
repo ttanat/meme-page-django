@@ -168,7 +168,7 @@ def comment(request, action):
         if not content or not uuid:
             return HttpResponseBadRequest()
 
-        Comment.objects.filter(user=request.user, uuid=uuid, deleted=False).update(content=content, edited=True)
+        Comment.objects.filter(user=request.user, uuid=uuid, deleted=0).update(content=content, edited=True)
 
         return HttpResponse()
 
@@ -177,12 +177,12 @@ def comment(request, action):
         if "u" not in request.GET:
             return HttpResponseBadRequest()
 
-        c = get_object_or_404(Comment.objects.only("image"), user=request.user, uuid=request.GET["u"], deleted=False)
+        c = get_object_or_404(Comment.objects.only("image"), user=request.user, uuid=request.GET["u"], deleted=0)
 
         # Delete image if exists and set deleted to true
         if c.image:
             c.image.delete()
-        c.deleted = True
+        c.deleted = 1
 
         c.save(update_fields=["deleted"])
 

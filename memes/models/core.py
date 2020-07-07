@@ -140,11 +140,12 @@ class Meme(models.Model):
 
             for obj in payload:
                 getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['fname']}.webp"
+                # getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['filename']}"
         else:
             payload = self.invoke_resize_function("resize_video_meme")
 
             for obj in payload:
-                getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['fname']}.{obj['ext']}"
+                getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['filename']}"
 
         self.save(update_fields=("large", "medium", "thumbnail", "small_thumbnail"))
 
@@ -230,10 +231,17 @@ class Comment(models.Model):
     post_date = models.DateTimeField(auto_now_add=True)
     image = models.ImageField(upload_to=user_directory_path_comments, null=True, blank=True)
     edited = models.BooleanField(default=False)
-    deleted = models.BooleanField(default=False)
+
+    class Deleted(models.IntegerChoices):
+        NO = 0, _("Not deleted"),
+        USER = 1, _("Deleted by user")
+        MODERATOR = 2, _("Removed by moderator")
+        STAFF = 3, _("Deleted by staff")
+
+    deleted = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
-        constraints = [CheckConstraint(check=~Q(content="", image=None, deleted=False), name="content_image_both_not_empty")]
+        constraints = [CheckConstraint(check=~Q(content="", image=None, deleted=0), name="content_image_both_not_empty")]
 
     def __str__(self):
         return f"{self.user.username}: {self.content}"
