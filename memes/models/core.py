@@ -116,6 +116,38 @@ class Meme(models.Model):
     def __str__(self):
         return f"{self.id}"
 
+    def invoke_resize_function(self, func_name: str) -> list:
+        """
+        func_name: name of AWS lambda function
+
+        Invoke resize function for image/gif/video then return response payload
+        """
+        response = client.invoke(
+            FunctionName=func_name,
+            InvocationType="RequestResponse",
+            Payload=json.dumps({
+                "file_key": self.original.name,
+                "path": f"users/{self.username}/memes"
+            }),
+            Qualifier="$LATEST"
+        )
+
+        return json.loads(response["Payload"].read())
+
+    def resize_file(self):
+        if self.content_type in ("image/jpeg", "image/png"):
+            payload = self.invoke_resize_function("resize_meme")
+
+            for obj in payload:
+                getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['fname']}.webp"
+        else:
+            payload = self.invoke_resize_function("resize_video_meme")
+
+            for obj in payload:
+                getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['fname']}.{obj['ext']}"
+
+        self.save(update_fields=("large", "medium", "thumbnail", "small_thumbnail"))
+
     # def resize_video(self):
     #     old_path = self.file.path
     #     path_to_dir = os.path.split(old_path)[0]
