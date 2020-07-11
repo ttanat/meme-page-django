@@ -85,7 +85,7 @@ def full_res(request, obj, uuid):
 
 @api_view(["GET"])
 def random(request):
-    queryset = Meme.objects.filter(hidden=False).filter(Q(page=None)|Q(page_private=False))
+    queryset = Meme.objects.filter(hidden=False, page_private=False)
     n = randint(0, queryset.count() - 1)
     response = queryset.values("uuid")[n]
 
