@@ -100,9 +100,9 @@ def get_likes(request, obj):
         return JsonResponse([], safe=False)
 
     if obj == "m":
-        return Response(MemeLike.objects.filter(user=request.user, meme__uuid__in=uuids).values("uuid", "point"))
+        return Response(MemeLike.objects.filter(user=request.user, meme_uuid__in=uuids).values("uuid", "point"))
     elif obj == "c":
-        return Response(CommentLike.objects.filter(user=request.user, comment__uuid__in=uuids).values("uuid", "point"))
+        return Response(CommentLike.objects.filter(user=request.user, comment_uuid__in=uuids).values("uuid", "point"))
 
     raise Http404
 
@@ -125,7 +125,7 @@ def like(request):
             obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, uuid=uuid, defaults={"point": point})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
-            MemeLike.objects.filter(user=request.user, meme__uuid=uuid).delete()
+            MemeLike.objects.filter(user=request.user, meme_uuid=uuid).delete()
             return HttpResponse(status=204)
     elif type_ == "c":
         if request.method == "PUT":
@@ -133,7 +133,7 @@ def like(request):
             obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, uuid=uuid, defaults={"point": point})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
-            CommentLike.objects.filter(user=request.user, comment__uuid=uuid).delete()
+            CommentLike.objects.filter(user=request.user, comment_uuid=uuid).delete()
             return HttpResponse(status=204)
 
     return HttpResponseBadRequest()

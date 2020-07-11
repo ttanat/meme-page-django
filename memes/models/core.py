@@ -307,6 +307,7 @@ class Like(models.Model):
 
 class MemeLike(Like):
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="likes")
+    meme_uuid = models.CharField(max_length=11, blank=False)
 
     class Meta:
         constraints = [UniqueConstraint(fields=["user", "meme"], name="unique_meme_vote")]
@@ -317,6 +318,7 @@ class MemeLike(Like):
 
 class CommentLike(Like):
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=False, blank=False, related_name="comment_likes")
+    comment_uuid = models.CharField(max_length=11, blank=False)
 
     class Meta:
         constraints = [UniqueConstraint(fields=["user", "comment"], name="unique_comment_vote")]
