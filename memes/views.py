@@ -122,7 +122,7 @@ def like(request):
     if type_ == "m":
         if request.method == "PUT":
             meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
-            obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, uuid=uuid, defaults={"point": point})
+            obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, meme_uuid=uuid, defaults={"point": point})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
             MemeLike.objects.filter(user=request.user, meme_uuid=uuid).delete()
@@ -130,7 +130,7 @@ def like(request):
     elif type_ == "c":
         if request.method == "PUT":
             comment = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
-            obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, uuid=uuid, defaults={"point": point})
+            obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, comment_uuid=uuid, defaults={"point": point})
             return HttpResponse(status=201 if created else 200)
         elif request.method == "DELETE":
             CommentLike.objects.filter(user=request.user, comment_uuid=uuid).delete()
