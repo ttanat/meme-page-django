@@ -156,6 +156,7 @@ def comment(request, action):
             user=request.user,
             username=request.user.username,
             meme=meme,
+            meme_uuid=uuid,
             content=content,
             image=image
         )
@@ -208,7 +209,9 @@ def reply(request):
         user=request.user,
         username=request.user.username,
         meme=reply_to.meme,
+        meme_uuid=reply_to.meme.uuid,
         reply_to=reply_to,
+        reply_to_uuid=c_uuid,
         content=content,
         image=image
     )
