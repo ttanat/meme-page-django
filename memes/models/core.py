@@ -251,15 +251,19 @@ def user_directory_path_comments(instance, filename):
 class Comment(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     username = models.CharField(max_length=32, blank=False)
+
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="comments")
+    meme_uuid = models.CharField(max_length=11, blank=False)
+
     reply_to = models.ForeignKey("Comment", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
-    content = models.CharField(max_length=150, blank=True)
-    mention = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="mention")
+    reply_to_uuid = models.CharField(max_length=11, blank=True)
+
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
+    post_date = models.DateTimeField(auto_now_add=True)
+    content = models.CharField(max_length=150, blank=True)
+    image = models.ImageField(upload_to=user_directory_path_comments, null=True, blank=True)
     points = models.IntegerField(default=0)
     num_replies = models.PositiveIntegerField(default=0)
-    post_date = models.DateTimeField(auto_now_add=True)
-    image = models.ImageField(upload_to=user_directory_path_comments, null=True, blank=True)
     edited = models.BooleanField(default=False)
 
     class Deleted(models.IntegerChoices):

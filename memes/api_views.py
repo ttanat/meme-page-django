@@ -163,7 +163,7 @@ class CommentViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        comments = Comment.objects.filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
+        comments = Comment.objects.filter(reply_to__isnull=True, meme_uuid=self.request.query_params["u"])
 
         return comments.filter(post_date__lte=parse_datetime(self.request.query_params["before"])) \
                if "before" in self.request.query_params else comments
@@ -177,7 +177,7 @@ class CommentFullViewSet(CommentViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        return Comment.objects.filter(reply_to__isnull=True, meme__uuid=self.request.query_params["u"])
+        return Comment.objects.filter(reply_to__isnull=True, meme_uuid=self.request.query_params["u"])
 
 
 class ReplyPagination(CommentPagination):
@@ -198,7 +198,7 @@ class ReplyViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        return Comment.objects.filter(reply_to__uuid=self.request.query_params["u"]).order_by("id")
+        return Comment.objects.filter(reply_to_uuid=self.request.query_params["u"]).order_by("id")
 
 
 class SearchListPagination(pagination.PageNumberPagination):

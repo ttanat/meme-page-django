@@ -144,13 +144,13 @@ class UserMemesSerializer(ProfileMemesSerializer):
 
 
 class ProfileCommentsSerializer(serializers.ModelSerializer):
-    m_uuid = serializers.CharField()
+    meme_uuid = serializers.CharField()
     image = serializers.SerializerMethodField()
     rt = serializers.CharField(default=None)
 
     class Meta:
         model = Comment
-        fields = ("content", "uuid", "m_uuid", "image", "rt")
+        fields = ("content", "uuid", "meme_uuid", "image", "rt")
 
     def get_image(self, obj):
         try:

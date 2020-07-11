@@ -99,8 +99,7 @@ class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return Comment.objects.annotate(
-            rt=F("reply_to__username"),
-            m_uuid=F("meme__uuid")
+            rt=F("reply_to__username")
         ).filter(user=self.request.user, deleted=False).order_by("-id")
 
 
