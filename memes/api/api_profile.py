@@ -75,7 +75,7 @@ class UserMemesViewSet(ProfileMemesViewSet):
         if "u" not in self.request.GET:
             raise ParseError
 
-        return Meme.objects.filter(user__username=self.request.GET["u"], hidden=False).filter(Q(page=None)|Q(page__private=False)).order_by("-id")
+        return Meme.objects.filter(username=self.request.GET["u"], hidden=False).filter(Q(page=None)|Q(page__private=False)).order_by("-id")
 
 
 class ProfileLikesViewSet(ProfileMemesViewSet):
@@ -93,7 +93,7 @@ class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return Comment.objects.annotate(
-            rt=F("reply_to__user__username"),
+            rt=F("reply_to__username"),
             m_uuid=F("meme__uuid")
         ).filter(user=self.request.user, deleted=False).order_by("-id")
 

@@ -21,7 +21,7 @@ def meme_view(request, uuid):
 
     meme = get_object_or_404(
         Meme.objects.select_related("user").only(
-            "user__username",
+            "username",
             "user__image",
             "page_id",
             "page_name",
