@@ -71,14 +71,13 @@ def full_res(request, obj, uuid):
     if obj == "m":
         meme = get_object_or_404(Meme.objects.only("large", "medium"), uuid=uuid, hidden=False)
         return JsonResponse({
-            "url": meme.get_file_url(),
-            "isVid": meme.get_file_url().endswith(".mp4")
+            "url": meme.get_file_url()
         })
     elif obj == "c":
         comment = get_object_or_404(Comment.objects.select_related("meme").only("image", "meme_uuid"), uuid=uuid)
         return JsonResponse({
-            "url": request.build_absolute_uri(comment.image.url),
-            "m_uuid": comment.meme_uuid
+            "url": comment.image.url,
+            "meme_uuid": comment.meme_uuid
         })
 
     raise Http404
