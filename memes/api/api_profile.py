@@ -75,7 +75,14 @@ class UserMemesViewSet(ProfileMemesViewSet):
         if "u" not in self.request.GET:
             raise ParseError
 
-        return Meme.objects.filter(username=self.request.GET["u"], hidden=False).filter(Q(page=None)|Q(page__private=False)).order_by("-id")
+        return Meme.objects.filter(username=self.request.GET["u"], hidden=False, page_private=False).order_by("-id")
+
+        """
+        Intentionally leave out memes on private pages that both users are subscribed to because query is too complicated
+
+        return Meme.objects.filter(username=self.request.GET["u"], hidden=False) \
+                           .filter(Q(page_private=False)|Q(page__subscribers=self.request.user.id)).order_by("-id")
+        """
 
 
 class ProfileLikesViewSet(ProfileMemesViewSet):
