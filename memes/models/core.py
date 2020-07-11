@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, InternalError
 from django.db.models import Q, CheckConstraint, UniqueConstraint
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -116,6 +116,28 @@ class Meme(models.Model):
     def __str__(self):
         return f"{self.id}"
 
+    def get_thumbnail_url(self):
+        """ Get thumbnail URL """
+        try:
+            return self.thumbnail.url
+        except ValueError:
+            return self.small_thumbnail.url
+
+        raise InternalError()
+
+    def get_file_url(self):
+        """ Get file URL """
+        try:
+            return self.large.url
+        except ValueError:
+            try:
+                return self.medium.url
+            except ValueError:
+                # Should only get here if file is an image <= 480x480 pixels
+                return self.get_thumbnail_url()
+
+        raise InternalError()
+
     def invoke_resize_function(self, func_name: str) -> list:
         """
         func_name: name of AWS lambda function
@@ -132,22 +154,28 @@ class Meme(models.Model):
             Qualifier="$LATEST"
         )
 
-        return json.loads(response["Payload"].read())
+        response = json.loads(response["Payload"].read())
+
+        if response["statusCode"] == 200:
+            return response["body"]
+
+        raise InternalError("Resize failed")
 
     def resize_file(self):
         if self.content_type in ("image/jpeg", "image/png"):
-            payload = self.invoke_resize_function("resize_meme")
+            # Resize images
+            payload = self.invoke_resize_function("resize_image_meme")
+        elif self.content_type.startswith("video/"):
+            # Resize videos
+            payload = self.invoke_resize_function("test_resize_video")
+        elif self.content_type == "image/gif":
+            # Resize gifs
+            payload = self.invoke_resize_function("resize_gif")
 
-            for obj in payload:
-                getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['fname']}.webp"
-                # getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['filename']}"
-        else:
-            payload = self.invoke_resize_function("resize_video_meme")
+        for obj in payload:
+            getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['filename']}"
 
-            for obj in payload:
-                getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['filename']}"
-
-        self.save(update_fields=("large", "medium", "thumbnail", "small_thumbnail"))
+        self.save(update_fields=[p["size"] for p in payload])
 
     # def resize_video(self):
     #     old_path = self.file.path

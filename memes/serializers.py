@@ -19,11 +19,11 @@ class MemeSerializer(serializers.ModelSerializer):
         fields = ("username", "pname", "pdname", "uuid", "caption", "content_type", "url", "points", "num_comments", "dp_url")
 
     def get_url(self, obj):
-        return self.context["request"].build_absolute_uri(obj.file.url)
+        return obj.get_file_url()
 
     def get_dp_url(self, obj):
         try:
-            return self.context["request"].build_absolute_uri(obj.user.image.url)
+            return obj.user.image.url # change to obj.small_image.url
         except ValueError:
             return ""
 
@@ -46,13 +46,13 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         try:
-            return "" if obj.deleted else self.context["request"].build_absolute_uri(obj.image.url)
+            return "" if obj.deleted else obj.image.url
         except ValueError:
             return ""
 
     def get_dp_url(self, obj):
         try:
-            return "" if obj.deleted else self.context["request"].build_absolute_uri(obj.user.image.url)
+            return "" if obj.deleted else obj.user.image.url
         except ValueError:
             return ""
 
@@ -80,13 +80,13 @@ class ReplySerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         try:
-            return self.context["request"].build_absolute_uri(obj.image.url)
+            return obj.image.url
         except ValueError:
             return ""
 
     def get_dp_url(self, obj):
         try:
-            return self.context["request"].build_absolute_uri(obj.user.image.url)
+            return obj.user.image.url
         except ValueError:
             return ""
 
@@ -100,7 +100,7 @@ class SearchUserSerializer(serializers.ModelSerializer):
 
     def get_dp_url(self, obj):
         try:
-            return self.context["request"].build_absolute_uri(obj.image.url)
+            return obj.image.url
         except ValueError:
             return ""
 
@@ -115,7 +115,7 @@ class SearchPageSerializer(serializers.ModelSerializer):
 
     def get_dp_url(self, obj):
         try:
-            return self.context["request"].build_absolute_uri(obj.image.url)
+            return obj.image.url
         except ValueError:
             return ""
 
@@ -134,10 +134,7 @@ class ProfileMemesSerializer(serializers.ModelSerializer):
         fields = ("uuid", "url", "points", "content_type")
 
     def get_url(self, obj):
-        try:
-            return self.context["request"].build_absolute_uri(obj.thumbnail.url)
-        except ValueError:
-            return self.context["request"].build_absolute_uri(obj.file.url)
+        return obj.get_thumbnail_url()
 
 
 class UserMemesSerializer(ProfileMemesSerializer):
@@ -157,6 +154,6 @@ class ProfileCommentsSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         try:
-            return self.context["request"].build_absolute_uri(obj.image.url)
+            return obj.image.url
         except ValueError:
             return ""

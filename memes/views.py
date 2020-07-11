@@ -27,8 +27,8 @@ def meme_view(request, uuid):
             "uuid",
             "caption",
             "content_type",
-            "file",
-            # "thumbnail",
+            "large",
+            "medium",
             "points",
             "num_comments",
             "user__image",
@@ -56,7 +56,7 @@ def meme_view(request, uuid):
         "uuid": meme.uuid,
         "caption": meme.caption,
         "content_type": meme.content_type,
-        "url": request.build_absolute_uri(meme.file.url),
+        "url": meme.get_file_url(),
         "points": meme.points,
         "num_comments": meme.num_comments,
         "dp_url": request.build_absolute_uri(meme.user.image.url) if meme.user.image else None,
@@ -67,10 +67,10 @@ def meme_view(request, uuid):
 @api_view(["GET"])
 def full_res(request, obj, uuid):
     if obj == "m":
-        meme = get_object_or_404(Meme.objects.only("file", "content_type"), uuid=uuid, hidden=False)
+        meme = get_object_or_404(Meme.objects.only("large", "medium"), uuid=uuid, hidden=False)
         return JsonResponse({
-            "url": request.build_absolute_uri(meme.file.url),
-            "isVid": meme.content_type.startswith("video/")
+            "url": meme.get_file_url(),
+            "isVid": meme.get_file_url().endswith(".mp4")
         })
     elif obj == "c":
         comment = get_object_or_404(Comment.objects.select_related("meme").only("image", "meme__uuid"), uuid=uuid)
