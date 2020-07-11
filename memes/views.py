@@ -123,7 +123,7 @@ def like(request):
         if request.method == "PUT":
             meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
             try:
-                obj = MemeLike.objects.only("id").get(user=request.user, meme=meme, meme_uuid=uuid)
+                obj = MemeLike.objects.only("meme_id").get(user=request.user, meme=meme, meme_uuid=uuid)
                 if obj.point != point:
                     obj.point = point
                     obj.save(update_fields=["point"])
@@ -143,7 +143,7 @@ def like(request):
         if request.method == "PUT":
             comment = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
             try:
-                obj = CommentLike.objects.only("id").get(user=request.user, comment=comment, comment_uuid=uuid)
+                obj = CommentLike.objects.only("comment_id").get(user=request.user, comment=comment, comment_uuid=uuid)
                 if obj.point != point:
                     obj.point = point
                     obj.save(update_fields=["point"])
