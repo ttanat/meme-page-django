@@ -117,7 +117,6 @@ class Meme(models.Model):
         return f"{self.id}"
 
     def get_thumbnail_url(self):
-        """ Get thumbnail URL """
         try:
             return self.thumbnail.url
         except ValueError:
@@ -126,7 +125,6 @@ class Meme(models.Model):
         raise InternalError()
 
     def get_file_url(self):
-        """ Get file URL """
         try:
             return self.large.url
         except ValueError:
