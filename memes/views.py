@@ -100,9 +100,9 @@ def get_likes(request, obj):
         return JsonResponse([], safe=False)
 
     if obj == "m":
-        return Response(MemeLike.objects.filter(user=request.user, meme_uuid__in=uuids).values("uuid", "point"))
+        return Response(MemeLike.objects.filter(user=request.user, meme_uuid__in=uuids).annotate(uuid=F("meme_uuid")).values("uuid", "point"))
     elif obj == "c":
-        return Response(CommentLike.objects.filter(user=request.user, comment_uuid__in=uuids).values("uuid", "point"))
+        return Response(CommentLike.objects.filter(user=request.user, comment_uuid__in=uuids).annotate(uuid=F("comment_uuid")).values("uuid", "point"))
 
     raise Http404
 
@@ -122,18 +122,41 @@ def like(request):
     if type_ == "m":
         if request.method == "PUT":
             meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
-            obj, created = MemeLike.objects.update_or_create(user=request.user, meme=meme, meme_uuid=uuid, defaults={"point": point})
-            return HttpResponse(status=201 if created else 200)
+            try:
+                obj = MemeLike.objects.only("id").get(user=request.user, meme=meme, meme_uuid=uuid)
+                if obj.point != point:
+                    obj.point = point
+                    obj.save(update_fields=["point"])
+
+                    return HttpResponse()
+            except MemeLike.DoesNotExist:
+                MemeLike.objects.create(user=request.user, meme=meme, meme_uuid=uuid, point=point)
+
+                return HttpResponse(status=201)
+
         elif request.method == "DELETE":
             MemeLike.objects.filter(user=request.user, meme_uuid=uuid).delete()
+
             return HttpResponse(status=204)
+
     elif type_ == "c":
         if request.method == "PUT":
             comment = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
-            obj, created = CommentLike.objects.update_or_create(user=request.user, comment=comment, comment_uuid=uuid, defaults={"point": point})
-            return HttpResponse(status=201 if created else 200)
+            try:
+                obj = CommentLike.objects.only("id").get(user=request.user, comment=comment, comment_uuid=uuid)
+                if obj.point != point:
+                    obj.point = point
+                    obj.save(update_fields=["point"])
+
+                    return HttpResponse()
+            except CommentLike.DoesNotExist:
+                CommentLike.objects.create(user=request.user, comment=comment, comment_uuid=uuid, point=point)
+
+                return HttpResponse(status=201)
+
         elif request.method == "DELETE":
             CommentLike.objects.filter(user=request.user, comment_uuid=uuid).delete()
+
             return HttpResponse(status=204)
 
     return HttpResponseBadRequest()
