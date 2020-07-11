@@ -69,8 +69,12 @@ def original_meme_path(instance, filename):
 class Meme(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     username = models.CharField(max_length=32, blank=False)
+
+    # Page fields
     page = models.ForeignKey("Page", on_delete=models.SET_NULL, null=True, blank=True)
-    private_page = models.BooleanField()
+    page_private = models.BooleanField(default=False)
+    page_name = models.CharField(max_length=32, blank=True)
+    page_display_name = models.CharField(max_length=32, blank=True)
 
     # Store original file
     original = models.FileField(upload_to=original_meme_path, null=False, blank=False)

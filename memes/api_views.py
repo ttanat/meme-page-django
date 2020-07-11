@@ -64,11 +64,11 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Don't show page name in container header if user is in a meme page
         if not pathname.startswith("page/"):
-            memes = memes.annotate(pname=F("page__name"), pdname=F("page__display_name"))
+            memes = memes.annotate(pname=F("page_name"), pdname=F("page_display_name"))
 
         # Don't show memes from private pages
         if pathname != "feed":
-            memes = memes.exclude(page__private=True)
+            memes = memes.exclude(page_private=True)
 
         if not pathname:
             return memes    # Currently just showing all memes
@@ -79,7 +79,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             # Don't show memes from private pages that user is not subscribed to
             if self.request.user.is_authenticated:
                 return memes.filter(Q(user__followers=self.request.user)|Q(page__subscribers=self.request.user)) \
-                            .exclude(Q(page__private=True)&~Q(page__subscribers=self.request.user))
+                            .exclude(Q(page_private=True)&~Q(page__subscribers=self.request.user))
 
             raise NotAuthenticated()
 
@@ -92,7 +92,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             if not pname or not re.search("^[a-zA-Z0-9_]+$", pname):
                 raise NotFound
 
-            return memes.filter(page__name=pname)
+            return memes.filter(page_name=pname)
 
         elif pathname.startswith("browse/"):
             category_name = pathname.partition("browse/")[2]

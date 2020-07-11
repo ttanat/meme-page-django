@@ -22,8 +22,11 @@ def meme_view(request, uuid):
     meme = get_object_or_404(
         Meme.objects.select_related("user", "page").only(
             "user__username",
-            "page__name",
-            "page__display_name",
+            "user__image",
+            "page_name",
+            "page_display_name",
+            "page_private",
+            "page__admin_id",
             "uuid",
             "caption",
             "content_type",
@@ -31,9 +34,6 @@ def meme_view(request, uuid):
             "medium",
             "points",
             "num_comments",
-            "user__image",
-            "page__private",
-            "page__admin_id",
             "num_views"
         ),
         uuid=uuid,
@@ -42,7 +42,7 @@ def meme_view(request, uuid):
     # page_id automatically selected
 
     # Only show memes from private pages to admin and subscribers
-    if meme.page and meme.page.private:
+    if meme.page_private:
         if (not request.user.is_authenticated or
                 (meme.page.admin_id != request.user.id and not request.user.subscriptions.filter(id=meme.page_id).exists())):
             return HttpResponse(status=403)
@@ -51,15 +51,15 @@ def meme_view(request, uuid):
 
     return Response({
         "username": meme.user.username,
-        "pname": meme.page.name if meme.page else None,
-        "pdname": meme.page.display_name if meme.page else None,
+        "pname": meme.page_name,
+        "pdname": meme.page_display_name,
         "uuid": meme.uuid,
         "caption": meme.caption,
         "content_type": meme.content_type,
         "url": meme.get_file_url(),
         "points": meme.points,
         "num_comments": meme.num_comments,
-        "dp_url": request.build_absolute_uri(meme.user.image.url) if meme.user.image else None,
+        "dp_url": meme.user.image.url if meme.user.image else None,
         "tags": meme.tags.values_list("name", flat=True)
     })
 
@@ -84,7 +84,7 @@ def full_res(request, obj, uuid):
 
 @api_view(["GET"])
 def random(request):
-    queryset = Meme.objects.filter(hidden=False).filter(Q(page=None)|Q(page__private=False))
+    queryset = Meme.objects.filter(hidden=False).filter(Q(page=None)|Q(page_private=False))
     n = randint(0, queryset.count() - 1)
     response = queryset.values("uuid")[n]
 
@@ -253,7 +253,9 @@ def upload(request):
             user=request.user,
             username=request.user.username,
             page=page,
-            private_page=page.private if page else False,
+            page_private=page.private if page else False,
+            page_name=page.name if page else "",
+            page_display_name=page.display_name if page else "",
             original=file,
             caption=caption,
             caption_embedded=c_embedded,
