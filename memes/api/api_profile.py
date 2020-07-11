@@ -62,8 +62,7 @@ class ProfileMemesViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # return Meme.objects.filter(user=self.request.user)
-        return self.request.user.meme_set.all()
+        return Meme.objects.filter(user=self.request.user)
 
 
 class UserMemesViewSet(ProfileMemesViewSet):
