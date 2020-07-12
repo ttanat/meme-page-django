@@ -157,7 +157,14 @@ def stop_moderating(self, request, name):
 @permission_classes([IsAuthenticated])
 def remove_meme_from_page(request, uuid):
     meme = get_object_or_404(
-        Meme.objects.select_related("page").only("user_id", "private_page", "page__admin_id", "page__num_posts"),
+        Meme.objects.select_related("page").only(
+            "user_id",
+            "page_private",
+            "page_name",
+            "page_display_name",
+            "page__admin_id",
+            "page__num_posts"
+        ),
         uuid=uuid
     )
 
@@ -165,8 +172,10 @@ def remove_meme_from_page(request, uuid):
     if (request.user.id == meme.page.admin_id
             or meme.page.moderators.filter(id=request.user.id).exists() and meme.user_id != meme.page.admin_id):
         meme.page = None
-        meme.private_page = False
-        meme.save(update_fields=("page", "private_page"))
+        meme.page_private = False
+        meme.page_name = ""
+        meme.page_display_name = ""
+        meme.save(update_fields=("page", "page_private", "page_name", "page_display_name"))
 
         # Subtract one from total number of posts on page
         meme.page.num_posts = F("num_posts") - 1
