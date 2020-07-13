@@ -272,7 +272,7 @@ class Comment(models.Model):
         MODERATOR = 2, _("Removed by moderator")
         STAFF = 3, _("Deleted by staff")
 
-    deleted = models.PositiveSmallIntegerField(default=0)
+    deleted = models.PositiveSmallIntegerField(default=0, choices=Deleted.choices)
 
     class Meta:
         constraints = [CheckConstraint(check=~Q(content="", image=None, deleted=0), name="content_image_both_not_empty")]
