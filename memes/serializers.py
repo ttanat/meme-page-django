@@ -7,8 +7,8 @@ from django.contrib.auth import authenticate
 
 class MemeSerializer(serializers.ModelSerializer):
     username = serializers.CharField()
-    pname = serializers.CharField(default=None)
-    pdname = serializers.CharField(default=None)
+    pname = serializers.CharField(default="")
+    pdname = serializers.CharField(default="")
     url = serializers.SerializerMethodField()
     points = serializers.IntegerField()
     num_comments = serializers.IntegerField()
@@ -146,7 +146,7 @@ class UserMemesSerializer(ProfileMemesSerializer):
 class ProfileCommentsSerializer(serializers.ModelSerializer):
     meme_uuid = serializers.CharField()
     image = serializers.SerializerMethodField()
-    rt = serializers.CharField(default=None)
+    rt = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -157,3 +157,6 @@ class ProfileCommentsSerializer(serializers.ModelSerializer):
             return obj.image.url
         except ValueError:
             return ""
+
+    def get_rt(self, obj):
+        return obj.rt if obj.rt else ""
