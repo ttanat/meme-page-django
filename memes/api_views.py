@@ -50,7 +50,18 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = MemePagination
 
     def get_queryset(self):
-        memes = Meme.objects.filter(hidden=False)
+        memes = Meme.objects.filter(hidden=False).defer(
+            "original",
+            "thumbnail",
+            "small_thumbnail",
+            "upload_date",
+            "nsfw",
+            "num_views",
+            "ip_address",
+            "hidden",
+            "page_id",
+            "page_private"
+        )
 
         if (not self.request.user.is_authenticated or
                 (self.request.user.is_authenticated and not self.request.user.show_nsfw)):
