@@ -6,10 +6,7 @@ from django.contrib.auth import authenticate
 
 
 class MemeSerializer(serializers.ModelSerializer):
-    username = serializers.CharField()
     url = serializers.SerializerMethodField()
-    points = serializers.IntegerField()
-    num_comments = serializers.IntegerField()
     dp_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -79,14 +76,17 @@ class CommentFullSerializer(CommentSerializer):
 
 
 class ReplySerializer(serializers.ModelSerializer):
-    username = serializers.CharField()
+    username = serializers.SerializerMethodField()
     content = serializers.SerializerMethodField()
-    points = serializers.IntegerField()
+    image = serializers.SerializerMethodField()
     dp_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = ("uuid", "username", "post_date", "edited", "content", "image", "points", "dp_url")
+
+    def get_username(self, obj):
+        return "" if obj.deleted else obj.username
 
     def get_content(self, obj):
         return "" if obj.deleted else obj.content
@@ -157,7 +157,6 @@ class UserMemesSerializer(ProfileMemesSerializer):
 
 
 class ProfileCommentsSerializer(serializers.ModelSerializer):
-    meme_uuid = serializers.CharField()
     image = serializers.SerializerMethodField()
     rt = serializers.SerializerMethodField()
 
@@ -172,4 +171,4 @@ class ProfileCommentsSerializer(serializers.ModelSerializer):
             return ""
 
     def get_rt(self, obj):
-        return obj.rt if obj.rt else ""
+        return obj.rt or ""
