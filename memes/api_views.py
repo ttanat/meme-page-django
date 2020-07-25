@@ -46,7 +46,7 @@ class MemePagination(pagination.PageNumberPagination):
 
 
 class MemeViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = MemeSerializer
+    serializer_class = FullMemeSerializer
     pagination_class = MemePagination
 
     def get_queryset(self):
@@ -61,10 +61,6 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         # Get memes before certain datetime
         if pathname and "before" in self.request.query_params:
             memes = memes.filter(upload_date__lte=parse_datetime(self.request.query_params["before"]))
-
-        # Don't show page name in container header if user is in a meme page
-        if not pathname.startswith("page/"):
-            memes = memes.annotate(pname=F("page_name"), pdname=F("page_display_name"))
 
         # Don't show memes from private pages
         if pathname != "feed":
@@ -92,7 +88,9 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             if not pname or not re.search("^[a-zA-Z0-9_]+$", pname):
                 raise NotFound
 
-            return memes.filter(page_name=pname)
+            self.serializer_class = MemeSerializer
+
+            return memes.filter(page_name=pname).defer("page_name", "page_display_name")
 
         elif pathname.startswith("browse/"):
             category_name = pathname.partition("browse/")[2]

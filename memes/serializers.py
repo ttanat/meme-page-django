@@ -7,8 +7,6 @@ from django.contrib.auth import authenticate
 
 class MemeSerializer(serializers.ModelSerializer):
     username = serializers.CharField()
-    pname = serializers.CharField(default="")
-    pdname = serializers.CharField(default="")
     url = serializers.SerializerMethodField()
     points = serializers.IntegerField()
     num_comments = serializers.IntegerField()
@@ -16,7 +14,7 @@ class MemeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Meme
-        fields = ("username", "pname", "pdname", "uuid", "caption", "content_type", "url", "points", "num_comments", "dp_url")
+        fields = ("username", "uuid", "caption", "content_type", "url", "points", "num_comments", "dp_url")
 
     def get_url(self, obj):
         return obj.get_file_url()
@@ -26,6 +24,21 @@ class MemeSerializer(serializers.ModelSerializer):
             return obj.user.image.url # change to obj.small_image.url
         except ValueError:
             return ""
+
+
+class FullMemeSerializer(MemeSerializer):
+    pname = serializers.SerializerMethodField()
+    pdname = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Meme
+        fields = ("username", "pname", "pdname", "uuid", "caption", "content_type", "url", "points", "num_comments", "dp_url")
+
+    def get_pname(self, obj):
+        return obj.page_name
+
+    def get_pdname(self, obj):
+        return obj.page_display_name
 
 
 class CommentSerializer(serializers.ModelSerializer):
