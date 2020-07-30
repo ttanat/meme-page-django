@@ -155,7 +155,7 @@ def stop_moderating(self, request, name):
 
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
-def remove_meme_from_page(request, uuid):
+def remove_meme(request, uuid):
     meme = get_object_or_404(
         Meme.objects.select_related("page").only(
             "user",
