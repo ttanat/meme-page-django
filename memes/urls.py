@@ -58,6 +58,8 @@ urlpatterns = [
     path("api/mods/leave/<str:name>", api_moderators.stop_moderating, name="leave_moderators"),
     # Remove meme from page
     path("api/remove_meme/<str:uuid>", api_moderators.remove_meme_from_page, name="remove_meme_from_page"),
+    # Remove comment
+    path("api/mods/remove/comment/<str:uuid>", api_moderators.remove_comment, name="remove_comment"),
 
     # Settings
     path("api/settings", api_settings.user_settings, name="settings"),

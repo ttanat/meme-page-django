@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import F
 from django.db import transaction, IntegrityError
 
-from memes.models import Page, User, ModeratorInvite, Meme
+from memes.models import Page, User, ModeratorInvite, Meme, Comment
 
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
@@ -158,7 +158,7 @@ def stop_moderating(self, request, name):
 def remove_meme_from_page(request, uuid):
     meme = get_object_or_404(
         Meme.objects.select_related("page").only(
-            "user_id",
+            "user",
             "page_private",
             "page_name",
             "page_display_name",
@@ -167,6 +167,9 @@ def remove_meme_from_page(request, uuid):
         ),
         uuid=uuid
     )
+
+    if not meme.page:
+        return HttpResponseBadRequest()
 
     # Admin can remove all memes, mods can remove all memes except admin's
     if (request.user.id == meme.page.admin_id
@@ -186,9 +189,42 @@ def remove_meme_from_page(request, uuid):
         # Restore comments removed by moderator of page
         meme.comments.filter(deleted=2).update(deleted=0)
 
-        return HttpResponse()
+        return HttpResponse(status=204)
 
     if meme.user_id == meme.page.admin_id:
         return HttpResponse("Cannot remove admin's memes", status=403)
+
+    return HttpResponseBadRequest()
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def remove_comment(request, uuid):
+    comment = get_object_or_404(
+        Comment.objects.select_related("meme__page").only(
+            "user",
+            "meme__page__admin_id"
+        ),
+        uuid=uuid
+    )
+
+    if not comment.meme.page:
+        return HttpResponseBadRequest()
+
+    # ID of admin of page of meme that comment is posted on
+    page_admin_id = comment.meme.page.admin_id
+
+    # Admin can remove all comments, mods can remove all comments except admin's
+    if (request.user.id == page_admin_id
+            or (comment.meme.page.moderators.filter(id=request.user.id).exists() and comment.user_id != page_admin_id)):
+
+        # Set comment deleted to "Removed by moderator"
+        comment.deleted = 2
+        comment.save(update_fields=["deleted"])
+
+        return HttpResponse(status=204)
+
+    if comment.user_id == page_admin_id:
+        return HttpResponse("Cannot remove admin's comments", status=403)
 
     return HttpResponseBadRequest()
