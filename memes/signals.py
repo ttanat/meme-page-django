@@ -1,17 +1,22 @@
 from django.db.models.signals import post_save, m2m_changed, pre_delete
 from django.dispatch import receiver
-from .models import Meme, MemeLike, CommentLike, Comment, User, Page, Notification
+from .models import Meme, MemeLike, CommentLike, Comment, User, Page, Notification, Profile
 from django.db.models import F
 # from notifications.signals import notify
 from django.utils import timezone
+
+
+@receiver(post_save, sender=User)
+def register_user(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
 
 
 @receiver(post_save, sender=Meme)
 def upload_meme(sender, instance, created, **kwargs):
     if created:
         instance.resize_file()
-        instance.user.num_memes = F("num_memes") + 1
-        instance.user.save(update_fields=["num_memes"])
+        Profile.objects.filter(user_id=instance.user_id).update(num_memes=F("num_memes") + 1)
 
         if instance.page:
             instance.page.num_posts = F("num_posts") + 1
@@ -20,8 +25,7 @@ def upload_meme(sender, instance, created, **kwargs):
 
 @receiver(pre_delete, sender=Meme)
 def delete_meme(sender, instance, **kwargs):
-    instance.user.num_memes = F("num_memes") - 1
-    instance.user.save(update_fields=["num_memes"])
+    Profile.objects.filter(user_id=instance.user_id).update(num_memes=F("num_memes") - 1)
 
     if instance.page:
         instance.page.num_posts = F("num_posts") - 1
@@ -39,8 +43,7 @@ def vote_meme(sender, instance, created, **kwargs):
     instance.meme.points = F("points") + change
     instance.meme.save(update_fields=["points"])
 
-    instance.meme.user.clout = F("clout") + change
-    instance.meme.user.save(update_fields=["clout"])
+    Profile.objects.filter(user_id=instance.meme.user_id).update(clout=F("clout") + change)
 
     # Update or create notification if vote is a like (not dislike)
     if created and instance.point == 1:
@@ -74,8 +77,7 @@ def vote_comment(sender, instance, created, **kwargs):
     instance.comment.points = F("points") + change
     instance.comment.save(update_fields=["points"])
 
-    instance.comment.user.clout = F("clout") + change
-    instance.comment.user.save(update_fields=["clout"])
+    Profile.objects.filter(user_id=instance.comment.user_id).update(clout=F("clout") + change)
 
     # Update or create notification if vote is a like (not dislike)
     if created and instance.point == 1:
@@ -102,8 +104,7 @@ def unvote_meme(sender, instance, **kwargs):
     instance.meme.points = F("points") - instance.point
     instance.meme.save(update_fields=["points"])
 
-    instance.meme.user.clout = F("clout") - instance.point
-    instance.meme.user.save(update_fields=["clout"])
+    Profile.objects.filter(user_id=instance.meme.user_id).update(clout=F("clout") - instance.point)
 
 
 @receiver(pre_delete, sender=CommentLike)
@@ -111,8 +112,7 @@ def unvote_comment(sender, instance, **kwargs):
     instance.comment.points = F("points") - instance.point
     instance.comment.save(update_fields=["points"])
 
-    instance.comment.user.clout = F("clout") - instance.point
-    instance.comment.user.save(update_fields=["clout"])
+    Profile.objects.filter(user_id=instance.comment.user_id).update(clout=F("clout") - instance.point)
 
 
 @receiver(post_save, sender=Comment)
@@ -156,13 +156,11 @@ def comment_meme(sender, instance, created, **kwargs):
 @receiver(m2m_changed, sender=User.followers.through)
 def follow_user(sender, instance, action, **kwargs):
     if action == "post_add":
-        instance.num_following = F("num_following") + 1
-        instance.save(update_fields=["num_following"])
+        Profile.objects.filter(user=instance).update(num_following=F("num_following") + 1)
 
         for pk in kwargs["pk_set"]:
-            followed_user = User.objects.only("num_followers").get(id=pk)
-            followed_user.num_followers = F("num_followers") + 1
-            followed_user.save(update_fields=["num_followers"])
+            followed_user = User.objects.only("id").get(id=pk)
+            Profile.objects.filter(user=followed_user).update(num_followers=F("num_followers") + 1)
 
             Notification.objects.create(
                 actor=instance,
@@ -176,13 +174,11 @@ def follow_user(sender, instance, action, **kwargs):
             break
 
     elif action == "post_remove":
-        instance.num_following = F("num_following") - 1
-        instance.save(update_fields=["num_following"])
+        Profile.objects.filter(user=instance).update(num_following=F("num_following") - 1)
 
         for pk in kwargs["pk_set"]:
-            unfollowed_user = User.objects.only("num_followers").get(id=pk)
-            unfollowed_user.num_followers = F("num_followers") - 1
-            unfollowed_user.save(update_fields=["num_followers"])
+            unfollowed_user = User.objects.only("id").get(id=pk)
+            Profile.objects.filter(user=unfollowed_user).update(num_followers=F("num_followers") - 1)
 
             Notification.objects.filter(
                 actor=instance,

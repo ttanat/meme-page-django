@@ -106,6 +106,8 @@ class ReplySerializer(serializers.ModelSerializer):
 
 class SearchUserSerializer(serializers.ModelSerializer):
     dp_url = serializers.SerializerMethodField()
+    bio = serializers.SerializerMethodField()
+    num_memes = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -116,6 +118,12 @@ class SearchUserSerializer(serializers.ModelSerializer):
             return obj.image.url
         except ValueError:
             return ""
+
+    def get_bio(self, obj):
+        return obj.profile.bio
+
+    def get_num_memes(self, obj):
+        return obj.profile.num_memes
 
 
 class SearchPageSerializer(serializers.ModelSerializer):

@@ -3,7 +3,7 @@ from django.db import IntegrityError
 from django.db.models import F, Q
 # from django.views.decorators.cache import cache_page
 
-from memes.models import Page, User
+from memes.models import Page, User, Profile
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -17,15 +17,16 @@ import re
 @permission_classes([IsAuthenticated])
 def user_session(request):
     user = request.user
+    profile = Profile.objects.values("bio", "clout", "num_followers", "num_following").get(user=user)
 
     return Response({
         "username": user.username,
-        "image": request.build_absolute_uri(user.image.url) if user.image else None,
-        "bio": user.bio,
+        "image": user.image.url if user.image else None,
+        "bio": profile["bio"],
         "stats": {
-            "clout": user.clout,
-            "num_followers": user.num_followers,
-            "num_following": user.num_following
+            "clout": profile["clout"],
+            "num_followers": profile["num_followers"],
+            "num_following": profile["num_following"]
         },
         "moderating": Page.objects.filter(Q(admin=user)|Q(moderators=user)).annotate(dname=F("display_name")).values("name", "dname", "private"),
         "subscriptions": user.subscriptions.annotate(dname=F("display_name")).values("name", "dname", "private", "permissions")

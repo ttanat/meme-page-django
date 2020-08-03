@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 # from django.views.decorators.cache import cache_page
 
-from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User
+from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User, Profile
 from analytics.signals import meme_viewed_signal
 
 from rest_framework.decorators import api_view, permission_classes
@@ -315,9 +315,7 @@ def update(request, field):
 
         new_bio = request.POST["new_val"][:150].strip()
 
-        if request.user.bio != new_bio:
-            request.user.bio = new_bio
-            request.user.save(update_fields=["bio"])
+        Profile.objects.filter(user=request.user).update(bio=new_bio)
 
         return JsonResponse({"new_val": new_bio})
 

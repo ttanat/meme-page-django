@@ -16,30 +16,25 @@ from rest_framework.exceptions import ParseError
 @permission_classes([IsAuthenticated])
 def profile(request):
     """ Get info for profile page """
-
-    return Response({
-        "bio": request.user.bio,
-        "clout": request.user.clout,
-        "num_followers": request.user.num_followers,
-        "num_following": request.user.num_following
-    })
+    return Response(Profile.objects.values("bio", "clout", "num_followers", "num_following").get(user=request.user))
 
 
 @api_view(["GET"])
 def user_page(request, username):
     """ Get info for /user/username page """
     user = get_object_or_404(
-        User.objects.only("image", "bio", "clout", "num_followers", "num_following"),
+        User.objects.select_related("profile") \
+                    .only("image", "profile__bio", "profile__clout", "profile__num_followers", "profile__num_following"),
         username__iexact=username
     )
 
     return Response({
-        "image": request.build_absolute_uri(user.image.url) if user.image else None,
+        "image": user.image.url if user.image else None,
         "is_following": request.user.follows.filter(pk=user.pk).exists() if request.user.is_authenticated else False,
-        "bio": user.bio,
-        "clout": user.clout,
-        "num_followers": user.num_followers,
-        "num_following": user.num_following,
+        "bio": user.profile.bio,
+        "clout": user.profile.clout,
+        "num_followers": user.profile.num_followers,
+        "num_following": user.profile.num_following,
         "moderating": Page.objects.filter(Q(admin=user)|Q(moderators=user)).annotate(dname=F("display_name")).values("name", "dname", "private")
     })
 
@@ -129,7 +124,7 @@ def get_followers(request):
         followers = followers.filter(username__gt=request.GET["after"])
 
     results = [
-        {"username": u.username, "image": request.build_absolute_uri(u.image.url) if u.image else None}
+        {"username": u.username, "image": u.image.url if u.image else None}
         for u in followers[:25]
     ]
 
@@ -148,7 +143,7 @@ def get_following(request):
         following = following.filter(username__gt=request.GET["after"])
 
     results = [
-        {"username": u.username, "image": request.build_absolute_uri(u.image.url) if u.image else None}
+        {"username": u.username, "image": u.image.url if u.image else None}
         for u in following[:25]
     ]
 

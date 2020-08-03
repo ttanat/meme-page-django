@@ -29,16 +29,10 @@ def user_directory_path_profile(instance, filename):
 
 
 class User(AbstractUser):
-    num_memes = models.PositiveIntegerField(default=0)
-    clout = models.IntegerField(default=0)
-    bio = models.CharField(max_length=64, blank=True)
-    follows = models.ManyToManyField(settings.AUTH_USER_MODEL, symmetrical=False, related_name="followers")
-    num_followers = models.PositiveIntegerField(default=0)
-    num_following = models.PositiveIntegerField(default=0)
     image = models.ImageField(upload_to=user_directory_path_profile, null=True, blank=True)
+    follows = models.ManyToManyField(settings.AUTH_USER_MODEL, symmetrical=False, related_name="followers")
     nsfw = models.BooleanField(default=False)
     show_nsfw = models.BooleanField(default=False)
-    num_views = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.username}"
@@ -54,6 +48,19 @@ class User(AbstractUser):
     def delete(self, *args, **kwargs):
         self.image.delete()
         super().delete(*args, **kwargs)
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    num_memes = models.PositiveIntegerField(default=0)
+    clout = models.IntegerField(default=0)
+    bio = models.CharField(max_length=64, blank=True)
+    num_followers = models.PositiveIntegerField(default=0)
+    num_following = models.PositiveIntegerField(default=0)
+    num_views = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.username} profile"
 
 
 class Following(models.Model):
