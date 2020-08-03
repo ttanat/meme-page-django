@@ -52,7 +52,7 @@ def meme_view(request, uuid):
     meme_viewed_signal.send(sender=meme.__class__, user=request.user, meme=meme)
 
     return Response({
-        "username": meme.user.username,
+        "username": meme.username,
         "pname": meme.page_name,
         "pdname": meme.page_display_name,
         "uuid": meme.uuid,
