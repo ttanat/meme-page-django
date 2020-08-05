@@ -62,25 +62,25 @@ class Moderator(models.Model):
     date_joined = models.DateTimeField(auto_now_add=True)
 
 
-class Notification(models.Model):
-    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
-    action = models.CharField(max_length=32, blank=False)
-    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
-    link = models.URLField(max_length=64, blank=False)
-    seen = models.BooleanField(default=False)
-    image = models.URLField(max_length=128, blank=True, default="")
-    message = models.CharField(max_length=128, blank=True)
-    timestamp = models.DateTimeField(auto_now_add=True)
+# class Notification(models.Model):
+#     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+#     action = models.CharField(max_length=32, blank=False)
+#     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+#     link = models.URLField(max_length=64, blank=False)
+#     seen = models.BooleanField(default=False)
+#     image = models.URLField(max_length=128, blank=True, default="")
+#     message = models.CharField(max_length=128, blank=True)
+#     timestamp = models.DateTimeField(auto_now_add=True)
 
-    target_meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=True, blank=True)
-    target_comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True)
-    target_page = models.ForeignKey(Page, on_delete=models.CASCADE, null=True, blank=True)
+#     target_meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=True, blank=True)
+#     target_comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True)
+#     target_page = models.ForeignKey(Page, on_delete=models.CASCADE, null=True, blank=True)
 
-    class Meta:
-        ordering = ["-id"]
+#     class Meta:
+#         ordering = ["-id"]
 
-    def __str__(self):
-        return f"{self.message}"
+#     def __str__(self):
+#         return f"{self.message}"
 
 
 class SubscribeRequest(models.Model):

@@ -1,7 +1,8 @@
 from django.http import HttpResponseBadRequest
 from django.core.paginator import Paginator
 
-from memes.models import Notification, ModeratorInvite
+from memes.models import ModeratorInvite
+from notifications.models import Notification
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
