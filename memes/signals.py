@@ -120,7 +120,7 @@ def comment_meme(sender, instance, created, **kwargs):
                     link=f"/m/{instance.meme.uuid}",
                     image=instance.user.image.url if instance.user.image else "",
                     message=f"{instance.user} replied to your comment",
-                    target_comment=instance.reply_to
+                    content_object=instance.reply_to
                 )
         else:
             if instance.meme.user_id != instance.user_id:
@@ -131,7 +131,7 @@ def comment_meme(sender, instance, created, **kwargs):
                     link=f"/m/{instance.meme.uuid}",
                     image=instance.meme.small_thumbnail.url,
                     message=f"{instance.user} commented on your meme",
-                    target_meme=instance.meme
+                    content_object=instance.meme
                 )
 
 
