@@ -103,35 +103,49 @@ def comment_meme(sender, instance, created, **kwargs):
         if instance.image:
             instance.resize_image()
 
+        is_reply = not not instance.reply_to_id
+
+        if is_reply:
+            meme = Meme.objects.only("num_comments").get(id=instance.meme_id)
+        else:
+            meme = Meme.objects.select_related("user") \
+                               .only("num_comments", "user__id", "small_thumbnail") \
+                               .get(id=instance.meme_id)
+
         # Update number of comments
-        instance.meme.num_comments = F("num_comments") + 1
-        instance.meme.save(update_fields=["num_comments"])
+        meme.num_comments = F("num_comments") + 1
+        meme.save(update_fields=["num_comments"])
 
-        if instance.reply_to:
+        if is_reply:
+            reply_to = Comment.objects.select_related("user").only("num_replies", "user__id").get(id=instance.reply_to_id)
+
             # Update number of replies
-            instance.reply_to.num_replies = F("num_replies") + 1
-            instance.reply_to.save(update_fields=["num_replies"])
+            reply_to.num_replies = F("num_replies") + 1
+            reply_to.save(update_fields=["num_replies"])
 
-            if instance.reply_to.user_id != instance.user_id:
+            actor = User.objects.only("image", "username").get(id=instance.user_id)
+
+            if reply_to.user.id != instance.user_id:
                 Notification.objects.create(
-                    actor=instance.user,
+                    actor=actor,
                     action="replied",
-                    recipient=instance.reply_to.user,
-                    link=f"/m/{instance.meme.uuid}",
-                    image=instance.user.image.url if instance.user.image else "",
-                    message=f"{instance.user} replied to your comment",
-                    content_object=instance.reply_to
+                    recipient=reply_to.user,
+                    link=f"/m/{instance.meme_uuid}",
+                    image=actor.image.url if actor.image else "",
+                    message=f"{actor.username} replied to your comment",
+                    content_object=reply_to
                 )
         else:
-            if instance.meme.user_id != instance.user_id:
+            if meme.user.id != instance.user_id:
+                actor = User.objects.only("username").get(id=instance.user_id)
                 Notification.objects.create(
-                    actor=instance.user,
+                    actor=actor,
                     action="commented",
-                    recipient=instance.meme.user,
-                    link=f"/m/{instance.meme.uuid}",
-                    image=instance.meme.small_thumbnail.url,
-                    message=f"{instance.user} commented on your meme",
-                    content_object=instance.meme
+                    recipient=meme.user,
+                    link=f"/m/{instance.meme_uuid}",
+                    image=meme.small_thumbnail.url,
+                    message=f"{actor.username} commented on your meme",
+                    content_object=meme
                 )
 
 
