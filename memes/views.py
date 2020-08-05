@@ -74,7 +74,10 @@ def full_res(request, obj, uuid):
             "url": meme.get_file_url()
         })
     elif obj == "c":
-        comment = get_object_or_404(Comment.objects.select_related("meme").only("image", "meme_uuid"), uuid=uuid)
+        comment = get_object_or_404(Comment.objects.only("image", "meme_uuid"), uuid=uuid)
+        if not comment.image:
+            return HttpResponseBadRequest()
+
         return JsonResponse({
             "url": comment.image.url,
             "meme_uuid": comment.meme_uuid
@@ -121,40 +124,46 @@ def like(request):
 
     if type_ == "m":
         if request.method == "PUT":
-            meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
             try:
-                obj = MemeLike.objects.only("meme_id").get(user=request.user, meme=meme, meme_uuid=uuid)
+                # Change like to dislike or vice versa
+                obj = MemeLike.objects.only("id").get(user=request.user, meme_uuid=uuid)
                 if obj.point != point:
                     obj.point = point
                     obj.save(update_fields=["point"])
 
                     return HttpResponse()
             except MemeLike.DoesNotExist:
-                MemeLike.objects.create(user=request.user, meme=meme, meme_uuid=uuid, point=point)
+                # Create a like/dislike
+                m = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
+                MemeLike.objects.create(user=request.user, meme=m, meme_uuid=uuid, point=point)
 
                 return HttpResponse(status=201)
 
         elif request.method == "DELETE":
+            # Delete a like/dislike
             MemeLike.objects.filter(user=request.user, meme_uuid=uuid).delete()
 
             return HttpResponse(status=204)
 
     elif type_ == "c":
         if request.method == "PUT":
-            comment = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
             try:
-                obj = CommentLike.objects.only("comment_id").get(user=request.user, comment=comment, comment_uuid=uuid)
+                # Change like to dislike or vice versa
+                obj = CommentLike.objects.only("id").get(user=request.user, comment_uuid=uuid)
                 if obj.point != point:
                     obj.point = point
                     obj.save(update_fields=["point"])
 
                     return HttpResponse()
             except CommentLike.DoesNotExist:
-                CommentLike.objects.create(user=request.user, comment=comment, comment_uuid=uuid, point=point)
+                # Create a like/dislike
+                c = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
+                CommentLike.objects.create(user=request.user, comment=c, comment_uuid=uuid, point=point)
 
                 return HttpResponse(status=201)
 
         elif request.method == "DELETE":
+            # Delete a like/dislike
             CommentLike.objects.filter(user=request.user, comment_uuid=uuid).delete()
 
             return HttpResponse(status=204)
@@ -173,7 +182,7 @@ def comment(request, action):
         if not uuid or (not content and not image):
             return HttpResponseBadRequest()
 
-        meme = get_object_or_404(Meme, uuid=uuid)
+        meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
 
         comment = Comment.objects.create(
             user=request.user,
@@ -204,11 +213,11 @@ def comment(request, action):
 
         c = get_object_or_404(Comment.objects.only("image"), user=request.user, uuid=request.GET["u"], deleted=0)
 
-        # Delete image if exists and set deleted to true
+        # Delete image if exists
         if c.image:
             c.image.delete()
+        # Set deleted to true
         c.deleted = 1
-
         c.save(update_fields=["deleted"])
 
         return HttpResponse(status=204)
@@ -226,13 +235,17 @@ def reply(request):
     if not c_uuid or (not content and not image):
         return HttpResponseBadRequest()
 
-    reply_to = get_object_or_404(Comment.objects.select_related("meme"), uuid=c_uuid, deleted=False)
+    reply_to = get_object_or_404(
+        Comment.objects.select_related("meme").only("meme__id", "meme_uuid"),
+        uuid=c_uuid,
+        deleted=False
+    )
 
     new_reply = Comment.objects.create(
         user=request.user,
         username=request.user.username,
         meme=reply_to.meme,
-        meme_uuid=reply_to.meme.uuid,
+        meme_uuid=reply_to.meme_uuid,
         reply_to=reply_to,
         reply_to_uuid=c_uuid,
         content=content,
