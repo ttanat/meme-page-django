@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, m2m_changed, pre_delete
 from django.dispatch import receiver
 from .models import Meme, MemeLike, CommentLike, Comment, User, Page, Profile
 from notifications.models import Notification
-from notifications.signals import meme_voted_signal
+from notifications.signals import meme_voted_signal, comment_voted_signal
 from django.db.models import F
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
@@ -41,7 +41,7 @@ def vote_meme(sender, instance, created, **kwargs):
     if like_created:
         # Extra fields selected to use when creating notification
         meme = Meme.objects.select_related("user") \
-                           .only( "points", "uuid", "small_thumbnail", "user__id") \
+                           .only("points", "uuid", "small_thumbnail", "user__id") \
                            .get(id=instance.meme_id)
         uid = meme.user.id
     else:
@@ -64,32 +64,25 @@ def vote_comment(sender, instance, created, **kwargs):
     # Calculate point change
     change = instance.point if created else instance.point * 2
 
+    like_created = created and instance.point == 1
+    if like_created:
+        comment = Comment.objects.select_related("user") \
+                                 .only("points", "user__id", "meme_uuid") \
+                                 .get(id=instance.comment_id)
+        uid = comment.user.id
+    else:
+        comment = Comment.objects.only("points", "user").get(id=instance.comment_id)
+        uid = comment.user_id
+
     # Update points on comment and update clout on user who posted that
-    new_points = instance.comment.points + change    # Do this so no need to call .refresh_from_db()
+    new_points = comment.points + change    # Do this so no need to call .refresh_from_db()
+    comment.points = F("points") + change
+    comment.save(update_fields=["points"])
+    Profile.objects.filter(user_id=uid).update(clout=F("clout") + change)
 
-    instance.comment.points = F("points") + change
-    instance.comment.save(update_fields=["points"])
-
-    Profile.objects.filter(user_id=instance.comment.user_id).update(clout=F("clout") + change)
-
-    # Update or create notification if vote is a like (not dislike)
-    if created and instance.point == 1:
-        if instance.comment.user_id != instance.user_id:
-            if new_points < 11 or (new_points < 101 and new_points % 25 == 0) or new_points % 100 == 0:
-                s = 's' if new_points > 2 else ''
-                message = f"{instance.user} {f'and {new_points - 1} other{s} ' if new_points > 1 else ''}liked your comment"
-
-                Notification.objects.update_or_create(
-                    action="liked",
-                    recipient=instance.comment.user,
-                    link=f"/m/{instance.comment.meme.uuid}",
-                    target_comment=instance.comment,
-                    defaults={
-                        "seen": False,
-                        "message": message,
-                        "timestamp": timezone.now()
-                    }
-                )
+    # Notify if vote is a like and user is not liking their own comment
+    if like_created and uid != instance.user_id:
+        comment_voted_signal.send(sender=sender, instance=instance, comment=comment, points=new_points)
 
 
 @receiver(pre_delete, sender=MemeLike)
