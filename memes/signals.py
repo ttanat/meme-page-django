@@ -1,8 +1,9 @@
 from django.db.models.signals import post_save, m2m_changed, pre_delete
 from django.dispatch import receiver
-from .models import Meme, MemeLike, CommentLike, Comment, User, Page, Notification, Profile
+from .models import Meme, MemeLike, CommentLike, Comment, User, Page, Profile
+from notifications.models import Notification
+from notifications.signals import meme_voted_signal
 from django.db.models import F
-# from notifications.signals import notify
 from django.utils import timezone
 
 
@@ -37,33 +38,26 @@ def vote_meme(sender, instance, created, **kwargs):
     # Calculate point change
     change = instance.point if created else instance.point * 2
 
+    like_created = created and instance.point == 1
+    if like_created:
+        # Extra fields selected to use when creating notification
+        meme = Meme.objects.select_related("user") \
+                           .only( "points", "uuid", "small_thumbnail", "user__id") \
+                           .get(id=instance.meme_id)
+        uid = meme.user.id
+    else:
+        meme = Meme.objects.only("points", "user").get(id=instance.meme_id)
+        uid = meme.user_id
+
     # Update points on meme and update clout on user who posted that
-    new_points = instance.meme.points + change    # Do this so no need to call .refresh_from_db()
+    new_points = meme.points + change    # Do this so no need to call .refresh_from_db()
+    meme.points = F("points") + change
+    meme.save(update_fields=["points"])
+    Profile.objects.filter(user_id=uid).update(clout=F("clout") + change)
 
-    instance.meme.points = F("points") + change
-    instance.meme.save(update_fields=["points"])
-
-    Profile.objects.filter(user_id=instance.meme.user_id).update(clout=F("clout") + change)
-
-    # Update or create notification if vote is a like (not dislike)
-    if created and instance.point == 1:
-        if instance.meme.user_id != instance.user_id:
-            if new_points < 11 or (new_points < 101 and new_points % 25 == 0) or new_points % 100 == 0:
-                s = 's' if new_points > 2 else ''
-                message = f"{instance.user} {f'and {new_points - 1} other{s} ' if new_points > 1 else ''}liked your meme"
-
-                Notification.objects.update_or_create(
-                    action="liked",
-                    recipient=instance.meme.user,
-                    link=f"/m/{instance.meme.uuid}",
-                    image=instance.meme.small_thumbnail.url,
-                    target_meme=instance.meme,
-                    defaults={
-                        "seen": False,
-                        "message": message,
-                        "timestamp": timezone.now()
-                    }
-                )
+    # Notify if vote is a like and user is not liking their own meme
+    if like_created and uid != instance.user_id:
+        meme_voted_signal.send(sender=sender, instance=instance, meme=meme, points=new_points)
 
 
 @receiver(post_save, sender=CommentLike)
