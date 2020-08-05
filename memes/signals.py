@@ -103,28 +103,15 @@ def comment_meme(sender, instance, created, **kwargs):
         if instance.image:
             instance.resize_image()
 
-        is_reply = not not instance.reply_to_id
-
-        if is_reply:
-            meme = Meme.objects.only("num_comments").get(id=instance.meme_id)
-        else:
-            meme = Meme.objects.select_related("user") \
-                               .only("num_comments", "user__id", "small_thumbnail") \
-                               .get(id=instance.meme_id)
-
         # Update number of comments
-        meme.num_comments = F("num_comments") + 1
-        meme.save(update_fields=["num_comments"])
+        Meme.objects.filter(id=instance.meme_id).update(num_comments=F("num_comments") + 1)
 
-        if is_reply:
-            reply_to = Comment.objects.select_related("user").only("num_replies", "user__id").get(id=instance.reply_to_id)
-
+        if instance.reply_to_id:
             # Update number of replies
-            reply_to.num_replies = F("num_replies") + 1
-            reply_to.save(update_fields=["num_replies"])
+            Comment.objects.filter(id=instance.reply_to_id).update(num_replies=F("num_replies") + 1)
 
+            reply_to = Comment.objects.select_related("user").only("num_replies", "user__id").get(id=instance.reply_to_id)
             actor = User.objects.only("image", "username").get(id=instance.user_id)
-
             if reply_to.user.id != instance.user_id:
                 Notification.objects.create(
                     actor=actor,
@@ -136,6 +123,7 @@ def comment_meme(sender, instance, created, **kwargs):
                     content_object=reply_to
                 )
         else:
+            meme = Meme.objects.select_related("user").only("user__id", "small_thumbnail").get(id=instance.meme_id)
             if meme.user.id != instance.user_id:
                 actor = User.objects.only("username").get(id=instance.user_id)
                 Notification.objects.create(
