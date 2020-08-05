@@ -5,6 +5,7 @@ from notifications.models import Notification
 from notifications.signals import meme_voted_signal
 from django.db.models import F
 from django.utils import timezone
+from django.contrib.contenttypes.models import ContentType
 
 
 @receiver(post_save, sender=User)
@@ -19,18 +20,16 @@ def upload_meme(sender, instance, created, **kwargs):
         instance.resize_file()
         Profile.objects.filter(user_id=instance.user_id).update(num_memes=F("num_memes") + 1)
 
-        if instance.page:
-            instance.page.num_posts = F("num_posts") + 1
-            instance.page.save(update_fields=["num_posts"])
+        if instance.page_id:
+            Page.objects.filter(id=instance.page_id).update(num_posts=F("num_posts") + 1)
 
 
 @receiver(pre_delete, sender=Meme)
 def delete_meme(sender, instance, **kwargs):
     Profile.objects.filter(user_id=instance.user_id).update(num_memes=F("num_memes") - 1)
 
-    if instance.page:
-        instance.page.num_posts = F("num_posts") - 1
-        instance.page.save(update_fields=["num_posts"])
+    if instance.page_id:
+        Page.objects.filter(id=instance.page_id).update(num_posts=F("num_posts") - 1)
 
 
 @receiver(post_save, sender=MemeLike)
@@ -95,17 +94,13 @@ def vote_comment(sender, instance, created, **kwargs):
 
 @receiver(pre_delete, sender=MemeLike)
 def unvote_meme(sender, instance, **kwargs):
-    instance.meme.points = F("points") - instance.point
-    instance.meme.save(update_fields=["points"])
-
+    Meme.objects.filter(uuid=instance.meme_uuid).update(points=F("points") - instance.point)
     Profile.objects.filter(user_id=instance.meme.user_id).update(clout=F("clout") - instance.point)
 
 
 @receiver(pre_delete, sender=CommentLike)
 def unvote_comment(sender, instance, **kwargs):
-    instance.comment.points = F("points") - instance.point
-    instance.comment.save(update_fields=["points"])
-
+    Comment.objects.filter(uuid=instance.comment_uuid).update(points=F("points") - instance.point)
     Profile.objects.filter(user_id=instance.comment.user_id).update(clout=F("clout") - instance.point)
 
 
@@ -155,31 +150,23 @@ def follow_user(sender, instance, action, **kwargs):
         for pk in kwargs["pk_set"]:
             followed_user = User.objects.only("id").get(id=pk)
             Profile.objects.filter(user=followed_user).update(num_followers=F("num_followers") + 1)
-
             Notification.objects.create(
                 actor=instance,
                 action="followed",
                 recipient=followed_user,
                 link=f"/user/{instance}",
                 image=instance.image.url if instance.image else "",
-                message=f"{instance} followed you"
+                message=f"{instance} followed you",
+                content_object=followed_user
             )
-
             break
 
     elif action == "post_remove":
         Profile.objects.filter(user=instance).update(num_following=F("num_following") - 1)
 
         for pk in kwargs["pk_set"]:
-            unfollowed_user = User.objects.only("id").get(id=pk)
-            Profile.objects.filter(user=unfollowed_user).update(num_followers=F("num_followers") - 1)
-
-            Notification.objects.filter(
-                actor=instance,
-                action="followed",
-                recipient=unfollowed_user
-            ).delete()
-
+            Profile.objects.filter(user_id=pk).update(num_followers=F("num_followers") - 1)
+            Notification.objects.filter(actor=instance, action="followed", recipient_id=pk).delete()
             break
 
 
@@ -190,7 +177,7 @@ def subscribe_page(sender, instance, action, **kwargs):
         instance.save(update_fields=["num_subscribers"])
 
         for pk in kwargs["pk_set"]:
-            new_sub = User.objects.only("id").get(id=pk)
+            new_sub = User.objects.only("id", "image").get(id=pk)
             Notification.objects.create(
                 actor=new_sub,
                 action="subscribed",
@@ -198,9 +185,8 @@ def subscribe_page(sender, instance, action, **kwargs):
                 link=f"/user/{new_sub}",
                 image=new_sub.image.url if new_sub.image else "",
                 message=f"{new_sub} subscribed to {instance}",
-                target_page=instance
+                content_object=instance
             )
-
             break
 
     elif action == "post_remove":
@@ -208,12 +194,11 @@ def subscribe_page(sender, instance, action, **kwargs):
         instance.save(update_fields=["num_subscribers"])
 
         for pk in kwargs["pk_set"]:
-            old_sub = User.objects.only("id").get(id=pk)
             Notification.objects.filter(
-                actor=old_sub,
+                actor_id=pk,
                 action="subscribed",
                 recipient_id=instance.admin_id,
-                target_page=instance
+                content_type=ContentType.objects.get_for_model(User),
+                object_id=instance.id
             ).delete()
-
             break
