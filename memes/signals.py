@@ -2,10 +2,15 @@ from django.db.models.signals import post_save, m2m_changed, pre_delete
 from django.dispatch import receiver
 from .models import Meme, MemeLike, CommentLike, Comment, User, Page, Profile
 from notifications.models import Notification
-from notifications.signals import meme_voted_signal, comment_voted_signal, comment_posted_signal, follow_user_signal
+from notifications.signals import (
+    meme_voted_signal,
+    comment_voted_signal,
+    comment_posted_signal,
+    follow_user_signal,
+    subscribe_page_signal
+)
 from django.db.models import F
 from django.utils import timezone
-from django.contrib.contenttypes.models import ContentType
 
 
 @receiver(post_save, sender=User)
@@ -136,16 +141,7 @@ def subscribe_page(sender, instance, action, **kwargs):
         instance.save(update_fields=["num_subscribers"])
 
         for pk in kwargs["pk_set"]:
-            new_sub = User.objects.only("id", "image").get(id=pk)
-            Notification.objects.create(
-                actor=new_sub,
-                action="subscribed",
-                recipient=instance.admin,
-                link=f"/user/{new_sub}",
-                image=new_sub.image.url if new_sub.image else "",
-                message=f"{new_sub} subscribed to {instance}",
-                content_object=instance
-            )
+            subscribe_page_signal.send(sender=sender, instance=instance, action=action, new_sub_pk=pk)
             break
 
     elif action == "post_remove":
@@ -153,11 +149,5 @@ def subscribe_page(sender, instance, action, **kwargs):
         instance.save(update_fields=["num_subscribers"])
 
         for pk in kwargs["pk_set"]:
-            Notification.objects.filter(
-                actor_id=pk,
-                action="subscribed",
-                recipient_id=instance.admin_id,
-                content_type=ContentType.objects.get_for_model(User),
-                object_id=instance.id
-            ).delete()
+            subscribe_page_signal.send(sender=sender, instance=instance, action=action, actor_pk=pk)
             break

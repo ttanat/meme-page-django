@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver, Signal
 from .models import Notification
-from memes.models import User, MemeLike, CommentLike, Comment, Meme
+from memes.models import User, MemeLike, CommentLike, Comment, Meme, Page
 from django.db.models import F
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
@@ -118,4 +118,30 @@ def notify_follow(sender, instance, action, **kwargs):
             actor=instance,
             action="followed",
             recipient_id=kwargs["recipient_id"]
+        ).delete()
+
+
+subscribe_page_signal = Signal(providing_args=["instance", "action"])
+
+
+@receiver(subscribe_page_signal, sender=Page.subscribers.through)
+def notify_subscribe(sender, instance, action, **kwargs):
+    if action == "post_add":
+        new_sub = User.objects.only("username", "image").get(id=kwargs["new_sub_pk"])
+        page_admin = User.objects.only("id").get(id=instance.admin_id)
+        Notification.objects.create(
+            actor=new_sub,
+            action="subscribed",
+            recipient=page_admin,
+            link=f"/user/{new_sub.username}",
+            image=new_sub.image.url if new_sub.image else "",
+            message=f"{new_sub.username} subscribed to {instance.name}",
+            content_object=instance
+        )
+    elif action == "post_remove":
+        Notification.objects.filter(
+            actor_id=kwargs["actor_pk"],
+            action="subscribed",
+            recipient_id=instance.admin_id,
+            object_id=instance.id
         ).delete()
