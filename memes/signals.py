@@ -116,38 +116,22 @@ def comment_meme(sender, instance, created, **kwargs):
 
 @receiver(m2m_changed, sender=User.followers.through)
 def follow_user(sender, instance, action, **kwargs):
-    if action == "post_add":
-        Profile.objects.filter(user=instance).update(num_following=F("num_following") + 1)
+    if action in ("post_add", "post_remove"):
+        change = 1 if action == "post_add" else -1
+        Profile.objects.filter(user=instance).update(num_following=F("num_following") + change)
 
         for pk in kwargs["pk_set"]:
-            followed_user = User.objects.only("id").get(id=pk)
-            Profile.objects.filter(user=followed_user).update(num_followers=F("num_followers") + 1)
-            follow_user_signal.send(sender=sender, instance=instance, action=action, followed_user=followed_user)
-            break
-
-    elif action == "post_remove":
-        Profile.objects.filter(user=instance).update(num_following=F("num_following") - 1)
-
-        for pk in kwargs["pk_set"]:
-            Profile.objects.filter(user_id=pk).update(num_followers=F("num_followers") - 1)
-            follow_user_signal.send(sender=sender, instance=instance, action=action, recipient_id=pk)
+            Profile.objects.filter(user_id=pk).update(num_followers=F("num_followers") + change)
+            follow_user_signal.send(sender=sender, instance=instance, action=action, pk=pk)
             break
 
 
 @receiver(m2m_changed, sender=Page.subscribers.through)
 def subscribe_page(sender, instance, action, **kwargs):
-    if action == "post_add":
-        instance.num_subscribers = F("num_subscribers") + 1
-        instance.save(update_fields=["num_subscribers"])
+    if action in ("post_add", "post_remove"):
+        change = 1 if action == "post_add" else -1
+        Page.objects.filter(id=instance.id).update(num_subscribers=F("num_subscribers") + change)
 
         for pk in kwargs["pk_set"]:
-            subscribe_page_signal.send(sender=sender, instance=instance, action=action, new_sub_pk=pk)
-            break
-
-    elif action == "post_remove":
-        instance.num_subscribers = F("num_subscribers") - 1
-        instance.save(update_fields=["num_subscribers"])
-
-        for pk in kwargs["pk_set"]:
-            subscribe_page_signal.send(sender=sender, instance=instance, action=action, actor_pk=pk)
+            subscribe_page_signal.send(sender=sender, instance=instance, action=action, pk=pk)
             break

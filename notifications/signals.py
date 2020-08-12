@@ -98,36 +98,37 @@ def notify_comment(sender, instance, **kwargs):
             )
 
 
-follow_user_signal = Signal(providing_args=["instance", "action"])
+follow_user_signal = Signal(providing_args=["instance", "action", "pk"])
 
 
 @receiver(follow_user_signal, sender=User.followers.through)
-def notify_follow(sender, instance, action, **kwargs):
+def notify_follow(sender, instance, action, pk, **kwargs):
     if action == "post_add":
+        followed_user = User.objects.only("id").get(id=pk)
         Notification.objects.create(
             actor=instance,
             action="followed",
-            recipient=kwargs["followed_user"],
+            recipient=followed_user,
             link=f"/user/{instance.username}",
             image=instance.image.url if instance.image else "",
             message=f"{instance.username} followed you",
-            content_object=kwargs["followed_user"]
+            content_object=followed_user
         )
     elif action == "post_remove":
         Notification.objects.filter(
             actor=instance,
             action="followed",
-            recipient_id=kwargs["recipient_id"]
+            recipient_id=pk
         ).delete()
 
 
-subscribe_page_signal = Signal(providing_args=["instance", "action"])
+subscribe_page_signal = Signal(providing_args=["instance", "action", "pk"])
 
 
 @receiver(subscribe_page_signal, sender=Page.subscribers.through)
-def notify_subscribe(sender, instance, action, **kwargs):
+def notify_subscribe(sender, instance, action, pk, **kwargs):
     if action == "post_add":
-        new_sub = User.objects.only("username", "image").get(id=kwargs["new_sub_pk"])
+        new_sub = User.objects.only("username", "image").get(id=pk)
         page_admin = User.objects.only("id").get(id=instance.admin_id)
         Notification.objects.create(
             actor=new_sub,
@@ -140,7 +141,7 @@ def notify_subscribe(sender, instance, action, **kwargs):
         )
     elif action == "post_remove":
         Notification.objects.filter(
-            actor_id=kwargs["actor_pk"],
+            actor_id=pk,
             action="subscribed",
             recipient_id=instance.admin_id,
             object_id=instance.id
