@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, m2m_changed, pre_delete
 from django.dispatch import receiver
 from .models import Meme, MemeLike, CommentLike, Comment, User, Page, Profile
 from notifications.models import Notification
-from notifications.signals import meme_voted_signal, comment_voted_signal, comment_posted_signal
+from notifications.signals import meme_voted_signal, comment_voted_signal, comment_posted_signal, follow_user_signal
 from django.db.models import F
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
@@ -117,15 +117,7 @@ def follow_user(sender, instance, action, **kwargs):
         for pk in kwargs["pk_set"]:
             followed_user = User.objects.only("id").get(id=pk)
             Profile.objects.filter(user=followed_user).update(num_followers=F("num_followers") + 1)
-            Notification.objects.create(
-                actor=instance,
-                action="followed",
-                recipient=followed_user,
-                link=f"/user/{instance}",
-                image=instance.image.url if instance.image else "",
-                message=f"{instance} followed you",
-                content_object=followed_user
-            )
+            follow_user_signal.send(sender=sender, instance=instance, action=action, followed_user=followed_user)
             break
 
     elif action == "post_remove":
@@ -133,7 +125,7 @@ def follow_user(sender, instance, action, **kwargs):
 
         for pk in kwargs["pk_set"]:
             Profile.objects.filter(user_id=pk).update(num_followers=F("num_followers") - 1)
-            Notification.objects.filter(actor=instance, action="followed", recipient_id=pk).delete()
+            follow_user_signal.send(sender=sender, instance=instance, action=action, recipient_id=pk)
             break
 
 

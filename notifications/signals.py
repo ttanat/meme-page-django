@@ -96,3 +96,26 @@ def notify_comment(sender, instance, **kwargs):
                 message=f"{actor.username} commented on your meme",
                 content_object=meme
             )
+
+
+follow_user_signal = Signal(providing_args=["instance", "action"])
+
+
+@receiver(follow_user_signal, sender=User.followers.through)
+def notify_follow(sender, instance, action, **kwargs):
+    if action == "post_add":
+        Notification.objects.create(
+            actor=instance,
+            action="followed",
+            recipient=kwargs["followed_user"],
+            link=f"/user/{instance.username}",
+            image=instance.image.url if instance.image else "",
+            message=f"{instance.username} followed you",
+            content_object=kwargs["followed_user"]
+        )
+    elif action == "post_remove":
+        Notification.objects.filter(
+            actor=instance,
+            action="followed",
+            recipient_id=kwargs["recipient_id"]
+        ).delete()
