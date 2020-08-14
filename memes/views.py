@@ -307,6 +307,8 @@ def upload(request):
 
         tag_names = re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", request.POST.get("tags"))[:20]
         if tag_names:
+            # Remove duplicates
+            tag_names = list(dict.fromkeys(tag_names))
             Tag.objects.bulk_create([Tag(name=t) for t in tag_names], ignore_conflicts=True)
             meme.tags.add(*Tag.objects.filter(name__in=tag_names))
 
