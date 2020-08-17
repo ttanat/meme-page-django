@@ -79,12 +79,8 @@ def user_settings(request):
         if "f" not in request.GET:
             return HttpResponseBadRequest()
 
-        field = request.GET["f"]
-        if field == "image":
+        if request.GET["f"] == "image":
             user.image.delete()
-        elif field == "email":
-            user.email = None
-            user.save(update_fields=["email"])
 
         return HttpResponse(status=204)
 
