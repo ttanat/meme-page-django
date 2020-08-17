@@ -117,7 +117,7 @@ def like(request):
     type_ = request.GET.get("t")
     vote = request.GET.get("v")
 
-    if not uuid or not type_ or vote not in ("l", "d"):
+    if not uuid or len(uuid) != 11 or not type_ or vote not in ("l", "d"):
         return HttpResponseBadRequest()
 
     point = 1 if vote == "l" else -1
