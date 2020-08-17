@@ -171,7 +171,7 @@ def like(request):
     return HttpResponseBadRequest()
 
 
-@api_view(("POST", "DELETE"))
+@api_view(("POST", "PUT", "DELETE"))
 @permission_classes([IsAuthenticated])
 def comment(request, action):
     if request.method == "POST" and action == "post":
@@ -195,7 +195,7 @@ def comment(request, action):
 
         return JsonResponse({"uuid": comment.uuid})
 
-    elif request.method == "POST" and action == "edit":
+    elif request.method == "PUT" and action == "edit":
         """ Edit comments and replies """
         uuid = request.POST.get("uuid")
         content = request.POST.get("content", "")[:150].strip()
