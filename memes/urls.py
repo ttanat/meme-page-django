@@ -3,17 +3,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from . import views
-from .api import api_auth, api_notifications, api_profile, api_page, api_moderators, api_settings
+from .api import api_auth, api_profile, api_page, api_moderators, api_settings
 
 urlpatterns = [
     # Authentication
     path("api/auth/user/", api_auth.user_session, name="user_session"),
     path("api/register", api_auth.register, name="register"),
     # path("logout", api_auth.logout_view, name="logout"),
-
-    # Notifications
-    path("api/notifications/nav", api_notifications.nav_notifications, name="nav_notifications"),
-    path("api/notifications", api_notifications.notifications, name="notifications"),
 
     path("api/m/<str:uuid>", views.meme_view, name="meme_view"),
     path("api/full_res/<str:obj>/<str:uuid>", views.full_res, name="full_res"),
