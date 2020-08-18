@@ -63,7 +63,7 @@ class CurrentModerators(APIView):
             return HttpResponseBadRequest()
 
         page = get_object_or_404(Page.objects.only("num_mods"), admin=request.user, name=name)
-        page.moderators.remove(*User.objects.filter(username__in=request.GET.getlist("username")))
+        page.moderators.remove(*User.objects.only("id").filter(username__in=request.GET.getlist("username")))
 
         page.num_mods = F("num_mods") - 1
         page.save(update_fields=["num_mods"])
