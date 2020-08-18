@@ -21,6 +21,8 @@ def invite_moderators(request, name):
     usernames = request.POST.getlist("new_mods")[:50]
     if not usernames:
         return HttpResponseBadRequest()
+    if request.user.username in usernames:
+        return HttpResponseBadRequest("Cannot add yourself")
 
     page = get_object_or_404(Page.objects.only("num_mods"), admin=request.user, name=name)
 
