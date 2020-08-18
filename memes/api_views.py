@@ -86,7 +86,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             # Don't show memes from private pages that user is not subscribed to
             if self.request.user.is_authenticated:
                 return memes.filter(Q(user__followers=self.request.user)|Q(page__subscribers=self.request.user)) \
-                            .exclude(Q(page_private=True)&~Q(page__subscribers=self.request.user))
+                            .exclude(Q(page_private=True)&~Q(page__subscribers=self.request.user)).distinct()
 
             raise NotAuthenticated()
 
