@@ -135,3 +135,10 @@ def subscribe_page(sender, instance, action, **kwargs):
         for pk in kwargs["pk_set"]:
             subscribe_page_signal.send(sender=sender, instance=instance, action=action, pk=pk)
             break
+
+
+@receiver(m2m_changed, sender=Page.moderators.through)
+def add_page_mod(sender, instance, action, **kwargs):
+    if action in ("post_add", "post_remove"):
+        change = 1 if action == "post_add" else -1
+        Page.objects.filter(id=instance.id).update(num_mods=F("num_mods") + change)

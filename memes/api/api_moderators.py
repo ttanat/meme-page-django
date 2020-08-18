@@ -62,11 +62,8 @@ class CurrentModerators(APIView):
         if "username" not in request.GET:
             return HttpResponseBadRequest()
 
-        page = get_object_or_404(Page.objects.only("num_mods"), admin=request.user, name=name)
+        page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
         page.moderators.remove(*User.objects.only("id").filter(username__in=request.GET.getlist("username")))
-
-        page.num_mods = F("num_mods") - 1
-        page.save(update_fields=["num_mods"])
 
         return HttpResponse(status=204)
 
@@ -119,9 +116,6 @@ class HandleModeratorInvite(APIView):
                     ModeratorInvite.objects.filter(page=page).delete()
 
                 page.moderators.add(request.user)
-
-                page.num_mods = F("num_mods") + 1
-                page.save(update_fields=["num_mods"])
 
                 # Send some data back for client to use
                 return Response({
