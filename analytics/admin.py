@@ -1,6 +1,7 @@
 from django.contrib import admin
 
-from .models import View
+from .models import View, TagUse, Trending
 
-# Register your models here.
 admin.site.register(View)
+admin.site.register(TagUse)
+admin.site.register(Trending)
