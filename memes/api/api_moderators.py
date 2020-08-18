@@ -119,7 +119,6 @@ class HandleModeratorInvite(APIView):
                     ModeratorInvite.objects.filter(page=page).delete()
 
                 page.moderators.add(request.user)
-                page.subscribers.add(request.user)
 
                 page.num_mods = F("num_mods") + 1
                 page.save(update_fields=["num_mods"])
