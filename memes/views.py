@@ -4,7 +4,7 @@ from django.db.models import F, Q
 # from django.views.decorators.cache import cache_page
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User, Profile
-from analytics.signals import meme_viewed_signal
+from analytics.signals import meme_viewed_signal, upload_signal
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -311,6 +311,8 @@ def upload(request):
             tag_names = list(dict.fromkeys(tag_names))
             Tag.objects.bulk_create([Tag(name=t) for t in tag_names], ignore_conflicts=True)
             meme.tags.add(*Tag.objects.filter(name__in=tag_names))
+
+            upload_signal.send(sender=meme.__class__, instance=meme, tags=tag_names)
 
         if request.POST.get("is_profile_page"):
             return JsonResponse({"success": True, "uuid": meme.uuid}, status=201)
