@@ -50,7 +50,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = MemePagination
 
     def get_queryset(self):
-        memes = Meme.objects.filter(hidden=False).defer(
+        memes = Meme.objects.defer(
             "original",
             "thumbnail",
             "small_thumbnail",
@@ -143,7 +143,7 @@ class PrivateMemeViewSet(viewsets.ReadOnlyModelViewSet):
                     and not page.moderators.filter(id=self.request.user.id).exists()):
             raise PermissionDenied
 
-        return Meme.objects.filter(page=page, hidden=False)
+        return Meme.objects.filter(page=page)
 
 
 def get_next_comment_link(self_, datetime):

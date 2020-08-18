@@ -36,8 +36,7 @@ def meme_view(request, uuid):
             "num_comments",
             "num_views"
         ),
-        uuid=uuid,
-        hidden=False
+        uuid=uuid
     )
 
     # Only show memes from private pages to admin, moderators, and subscribers
@@ -69,7 +68,7 @@ def meme_view(request, uuid):
 @api_view(["GET"])
 def full_res(request, obj, uuid):
     if obj == "m":
-        meme = get_object_or_404(Meme.objects.only("large", "medium"), uuid=uuid, hidden=False)
+        meme = get_object_or_404(Meme.objects.only("large", "medium"), uuid=uuid)
         return JsonResponse({
             "url": meme.get_file_url()
         })
@@ -88,7 +87,7 @@ def full_res(request, obj, uuid):
 
 @api_view(["GET"])
 def random(request):
-    queryset = Meme.objects.filter(hidden=False, page_private=False)
+    queryset = Meme.objects.filter(page_private=False)
     n = randint(0, queryset.count() - 1)
     response = queryset.values("uuid")[n]
 

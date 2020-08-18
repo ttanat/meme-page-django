@@ -73,6 +73,12 @@ def original_meme_path(instance, filename):
     return f"users/{instance.user.username}/memes/original/{set_random_filename(filename)}"
 
 
+class MemeManager(models.Manager):
+    def get_queryset(self):
+        # Always return unhidden memes
+        return super().get_queryset().filter(hidden=False)
+
+
 class Meme(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     username = models.CharField(max_length=32, blank=False)
@@ -120,6 +126,8 @@ class Meme(models.Model):
     num_views = models.PositiveIntegerField(default=0)
     ip_address = models.GenericIPAddressField(null=True)
     hidden = models.BooleanField(default=False)
+
+    objects = MemeManager()
 
     class Meta:
         ordering = ["-id"]
