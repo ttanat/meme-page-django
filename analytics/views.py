@@ -14,7 +14,4 @@ def trending(request):
     """
     Get list of most used hashtags
     """
-    try:
-        return Response(Trending.objects.values_list("data", flat=True).get(day=date.today()))
-    except Trending.DoesNotExist:
-        return Response(TrendingData().run())
+    return Response(TrendingData().run())

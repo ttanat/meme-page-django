@@ -71,7 +71,10 @@ class TrendingData:
         return data
 
     def run(self):
-        data = self.compute_trending_data()
-        obj, created = Trending.objects.get_or_create(day=self.day, defaults={"data": data})
+        try:
+            return Trending.objects.values_list("data", flat=True).get(day=self.day)
+        except Trending.DoesNotExist:
+            data = self.compute_trending_data()
+            obj, created = Trending.objects.get_or_create(day=self.day, defaults={"data": data})
 
-        return obj.data
+            return obj.data
