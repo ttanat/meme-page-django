@@ -38,7 +38,7 @@ class TagUse(models.Model):
 
 class Trending(models.Model):
     data = models.JSONField(default=default_JSON)
-    day = models.DateField(auto_now_add=True, unique=True)
+    day = models.DateField(unique=True)
 
     def __str__(self):
         return f"Trending data - {self.day}"

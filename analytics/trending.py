@@ -8,9 +8,12 @@ from typing import List
 
 class TrendingData:
     def __init__(self):
+        # Only compute for yesterday; doing it for today will result in missing data (must be done at end of day)
+        self.day = date.today() - timedelta(days=1)
+
         # Data for which tags are trending (most used in past week)
         # e.g. [{"lower_name": "banana", "num_posts": 100}, ...]
-        self.trending = TagUse.objects.filter(day__gt=date.today() - timedelta(days=6)) \
+        self.trending = TagUse.objects.filter(day__range=[self.day - timedelta(days=6), self.day + timedelta(days=1)]) \
                                       .values("lower_name") \
                                       .annotate(num_posts=Sum("count")) \
                                       .order_by("-num_posts")[:10]
@@ -19,7 +22,7 @@ class TrendingData:
         # e.g. #banana, #Banana, #BaNaNa used
         # e.g. [{"lower_name": "banana", "variants": {"Banana": 60, "banana": 30, "BaNaNa": 10}}, ...]
         self.variants = TagUse.objects.filter(
-            day__gt=date.today() - timedelta(days=6),
+            day__range=[self.day - timedelta(days=6), self.day + timedelta(days=1)],
             lower_name__in=[tag["lower_name"] for tag in self.trending]
         ).values("lower_name", "variants")
 
@@ -69,6 +72,6 @@ class TrendingData:
 
     def run(self):
         data = self.compute_trending_data()
-        obj, created = Trending.objects.get_or_create(day=date.today(), defaults={"data": data})
+        obj, created = Trending.objects.get_or_create(day=self.day, defaults={"data": data})
 
         return obj.data
