@@ -30,7 +30,7 @@ def user_directory_path_profile(instance, filename):
 
 class User(AbstractUser):
     image = models.ImageField(upload_to=user_directory_path_profile, null=True, blank=True)
-    follows = models.ManyToManyField(settings.AUTH_USER_MODEL, symmetrical=False, related_name="followers")
+    follows = models.ManyToManyField(settings.AUTH_USER_MODEL, symmetrical=False, related_name="followers", through="Following")
     nsfw = models.BooleanField(default=False)
     show_nsfw = models.BooleanField(default=False)
 
@@ -50,6 +50,12 @@ class User(AbstractUser):
         super().delete(*args, **kwargs)
 
 
+class Following(models.Model):
+    follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="follower")
+    following = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following")
+    date_followed = models.DateTimeField(auto_now_add=True)
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     num_memes = models.PositiveIntegerField(default=0)
@@ -61,12 +67,6 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} profile"
-
-
-class Following(models.Model):
-    follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="follower")
-    following = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following")
-    date_followed = models.DateTimeField(auto_now_add=True)
 
 
 def original_meme_path(instance, filename):
@@ -91,12 +91,10 @@ class Meme(models.Model):
 
     # Store original file
     original = models.FileField(upload_to=original_meme_path, null=False, blank=False)
-
     # Full size (960x960) for desktop (WEBP/MP4)
     large = models.FileField(null=True, blank=True)
     # Medium size (640x640) for mobile (WEBP/MP4)
     medium = models.FileField(null=True, blank=True)
-
     # Thumbnail (480x480) for profile and video and gif memes (WEBP)
     thumbnail = models.ImageField(null=True, blank=True)
     # Small thumbnail (320x320) for mobile thumbnails (WEBP)

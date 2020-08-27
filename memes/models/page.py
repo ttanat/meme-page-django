@@ -14,7 +14,7 @@ def page_directory_path(instance, filename):
 class Page(models.Model):
     admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating", through="Moderator")
-    subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="subscriptions")
+    subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="subscriptions", through="Subscriber")
     created = models.DateTimeField(auto_now_add=True)
 
     name = models.CharField(max_length=32, blank=False, unique=True)
@@ -58,6 +58,12 @@ class Page(models.Model):
 
 class Moderator(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    page = models.ForeignKey(Page, on_delete=models.CASCADE)
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+
+class Subscriber(models.Model):
+    subscriber = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     page = models.ForeignKey(Page, on_delete=models.CASCADE)
     date_joined = models.DateTimeField(auto_now_add=True)
 
