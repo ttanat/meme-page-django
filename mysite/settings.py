@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'memes.apps.MemesConfig',
     'analytics.apps.AnalyticsConfig',
     'notifications.apps.NotificationsConfig',
+    'reports.apps.ReportsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

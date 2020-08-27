@@ -337,12 +337,3 @@ class CommentLike(Like):
     def __str__(self):
         return f"{self.user.username} comment {self.comment_id} {'' if self.point == 1 else 'dis'}like"
 
-
-# class Report(models.Model):
-#     reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-#     meme = models.ForeignKey(Meme, on_delete=models.SET_NULL, null=True)
-#     comment = models.ForeignKey(Comment, on_delete=models.SET_NULL, null=True)
-#     page = models.ForeignKey(Page, on_delete=models.SET_NULL, null=True)
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="reported_user")
-#     reason = models.CharField(max_length=64, blank=False)
-#     message = models.CharField(max_length=500, blank=True)
