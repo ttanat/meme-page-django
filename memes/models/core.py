@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.files.base import ContentFile
 # from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
 
 from secrets import token_urlsafe
 from PIL import Image
@@ -173,6 +174,9 @@ class Meme(models.Model):
 
         if response["statusCode"] == 200:
             return response["body"]
+        elif response["statusCode"] == 418:
+            self.delete()
+            raise ValidationError(response["errorMessage"])
 
         raise InternalError("Resize failed")
 
