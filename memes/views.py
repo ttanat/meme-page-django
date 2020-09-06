@@ -314,7 +314,11 @@ def upload(request):
             upload_signal.send(sender=meme.__class__, instance=meme, tags=tag_names)
 
         if request.POST.get("is_profile_page"):
-            return JsonResponse({"success": True, "uuid": meme.uuid}, status=201)
+            response = {"success": True, "uuid": meme.uuid}
+            if meme.content_type.startswith("video/"):
+                response["thumbnail"] = meme.get_thumbnail_url()
+
+            return JsonResponse(response, status=201)
         else:
             return JsonResponse({"success": True}, status=201)
 
