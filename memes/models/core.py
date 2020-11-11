@@ -161,7 +161,7 @@ class Meme(models.Model):
             FunctionName=func_name,
             InvocationType=invocation_type,
             Payload=json.dumps({
-                "file_key": self.original.name,
+                "original_key": self.original.name,
                 "path": f"users/{self.username}/memes"
             }),
             Qualifier="$LATEST"
