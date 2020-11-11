@@ -155,6 +155,8 @@ class Meme(models.Model):
         """
         invocation_type = kwargs.get("invocation_type", "RequestResponse")
 
+        print("Calling function...")
+
         response = client.invoke(
             FunctionName=func_name,
             InvocationType=invocation_type,
@@ -165,7 +167,13 @@ class Meme(models.Model):
             Qualifier="$LATEST"
         )
 
+        print("Done calling")
+
         response = json.loads(response["Payload"].read())
+
+        print()
+        print(response)
+        print()
 
         if response["statusCode"] == 200:
             return response["body"]
@@ -176,6 +184,8 @@ class Meme(models.Model):
         raise InternalError("Resize failed")
 
     def resize_file(self):
+        print("Choosing resize function...")
+
         if self.content_type in ("image/jpeg", "image/png"):
             # Resize images
             payload = self.invoke_resize_function("resize_image_meme", invocation_type="Event")
@@ -186,10 +196,15 @@ class Meme(models.Model):
             # Resize gifs
             payload = self.invoke_resize_function("resize_gif")
 
+        print("Done resizing")
+        print(payload)
+
         for obj in payload:
             getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['filename']}"
 
         self.save(update_fields=[p["size"] for p in payload])
+
+        print("Done everything")
 
     # def resize_video(self):
     #     old_path = self.file.path
