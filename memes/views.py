@@ -260,7 +260,6 @@ def upload(request):
     page_name = request.POST.get("page")
     file = request.FILES.get("file")
     caption = request.POST.get("caption", "")[:100]
-    c_embedded = request.POST.get("embed_caption") == "true"
     nsfw = request.POST.get("nsfw") == "true"
     content_type = file.content_type if file else None
     category_name = request.POST.get("category")
@@ -296,7 +295,6 @@ def upload(request):
             page_display_name=page.display_name if page else "",
             original=file,
             caption=caption,
-            caption_embedded=c_embedded,
             content_type=content_type,
             nsfw=nsfw,
             category=category,

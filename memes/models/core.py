@@ -109,7 +109,6 @@ class Meme(models.Model):
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     dank = models.BooleanField(default=False)
     caption = models.CharField(max_length=100, blank=True)
-    caption_embedded = models.BooleanField(default=False)
     upload_date = models.DateTimeField(auto_now_add=True)
     points = models.IntegerField(default=0)
     num_comments = models.PositiveIntegerField(default=0)
