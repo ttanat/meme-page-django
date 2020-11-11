@@ -22,7 +22,7 @@ def set_uuid():
 
 # Gets random string from set_uuid() then add extension from current filename
 def set_random_filename(current):
-    return f"{set_uuid()}{os.path.splitext(current)[1]}"
+    return f"{token_urlsafe(5)}{os.path.splitext(current)[1]}"
 
 
 def user_directory_path_profile(instance, filename):
