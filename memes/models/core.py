@@ -179,6 +179,7 @@ class Meme(models.Model):
             self.delete()
             raise ValidationError(response["errorMessage"])
 
+        self.delete()
         raise InternalError("Resize failed")
 
     def resize_file(self):
