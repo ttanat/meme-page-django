@@ -46,7 +46,7 @@ def vote_meme(sender, instance, created, **kwargs):
     if like_created:
         # Extra fields selected to use when creating notification
         meme = Meme.objects.select_related("user") \
-                           .only("points", "uuid", "small_thumbnail", "user__id") \
+                           .only("points", "uuid", "thumbnail", "user__id") \
                            .get(id=instance.meme_id)
         uid = meme.user.id
     else:

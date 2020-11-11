@@ -92,14 +92,10 @@ class Meme(models.Model):
 
     # Store original file
     original = models.FileField(upload_to=original_meme_path, null=False, blank=False)
-    # Full size (960x960) for desktop (WEBP/MP4)
+    # Full size (960x960 for images, 718x718 for video) for desktop (WEBP/MP4)
     large = models.FileField(null=True, blank=True)
-    # Medium size (640x640) for mobile (WEBP/MP4)
-    medium = models.FileField(null=True, blank=True)
-    # Thumbnail (480x480) for profile and video and gif memes (WEBP)
+    # Thumbnail (400x400) (WEBP)
     thumbnail = models.ImageField(null=True, blank=True)
-    # Small thumbnail (320x320) for mobile thumbnails (WEBP)
-    small_thumbnail = models.ImageField(null=True, blank=True)
 
     class ContentType(models.TextChoices):
         JPEG = "image/jpeg", _("JPEG")
@@ -138,7 +134,7 @@ class Meme(models.Model):
         try:
             return self.thumbnail.url
         except ValueError:
-            return self.small_thumbnail.url
+            return self.original.url
 
         raise InternalError()
 
@@ -146,11 +142,8 @@ class Meme(models.Model):
         try:
             return self.large.url
         except ValueError:
-            try:
-                return self.medium.url
-            except ValueError:
-                # Should only get here if file is an image <= 480x480 pixels
-                return self.get_thumbnail_url()
+            # Should only get here if file is an image <= 400x400 pixels
+            return self.get_thumbnail_url()
 
         raise InternalError()
 
@@ -221,9 +214,7 @@ class Meme(models.Model):
     def delete(self, *args, **kwargs):
         self.original.delete()
         self.large.delete()
-        self.medium.delete()
         self.thumbnail.delete()
-        self.small_thumbnail.delete()
         super().delete(*args, **kwargs)
 
 

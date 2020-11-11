@@ -23,7 +23,7 @@ def notify_meme_like(sender, instance, meme, points, **kwargs):
             action="liked",
             recipient=meme.user,
             link=f"/m/{meme.uuid}",
-            image=meme.small_thumbnail.url,
+            image=meme.thumbnail.url,
             content_type=ContentType.objects.get_for_model(sender),
             object_id=instance.id,
             defaults={
@@ -84,7 +84,7 @@ def notify_comment(sender, instance, **kwargs):
             )
     # If instance is a top level comment
     else:
-        meme = Meme.objects.select_related("user").only("user__id", "small_thumbnail").get(id=instance.meme_id)
+        meme = Meme.objects.select_related("user").only("user__id", "thumbnail").get(id=instance.meme_id)
         if meme.user.id != instance.user_id:
             actor = User.objects.only("username").get(id=instance.user_id)
             Notification.objects.create(
@@ -92,7 +92,7 @@ def notify_comment(sender, instance, **kwargs):
                 action="commented",
                 recipient=meme.user,
                 link=f"/m/{instance.meme_uuid}",
-                image=meme.small_thumbnail.url,
+                image=meme.thumbnail.url,
                 message=f"{actor.username} commented on your meme",
                 content_object=meme
             )

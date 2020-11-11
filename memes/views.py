@@ -31,7 +31,6 @@ def meme_view(request, uuid):
             "caption",
             "content_type",
             "large",
-            "medium",
             "points",
             "num_comments",
             "num_views"
@@ -68,7 +67,7 @@ def meme_view(request, uuid):
 @api_view(["GET"])
 def full_res(request, obj, uuid):
     if obj == "m":
-        meme = get_object_or_404(Meme.objects.only("large", "medium"), uuid=uuid)
+        meme = get_object_or_404(Meme.objects.only("large"), uuid=uuid)
         return JsonResponse({
             "url": meme.get_file_url()
         })

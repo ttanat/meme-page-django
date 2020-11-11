@@ -53,7 +53,6 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         memes = Meme.objects.defer(
             "original",
             "thumbnail",
-            "small_thumbnail",
             "upload_date",
             "nsfw",
             "num_views",
