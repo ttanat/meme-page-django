@@ -190,7 +190,7 @@ class Meme(models.Model):
             payload = self.invoke_resize_function("resize_image_meme")
         elif self.content_type.startswith("video/"):
             # Resize videos
-            payload = self.invoke_resize_function("resize_video_ffprobe_testing")
+            payload = self.invoke_resize_function("rvf1")
         elif self.content_type == "image/gif":
             # Resize gifs
             payload = self.invoke_resize_function("resize_gif")
