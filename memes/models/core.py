@@ -147,19 +147,17 @@ class Meme(models.Model):
 
         raise InternalError()
 
-    def invoke_resize_function(self, func_name: str, **kwargs) -> list:
+    def invoke_resize_function(self, func_name: str) -> list:
         """
         func_name: name of AWS lambda function
 
         Invoke resize function for image/gif/video then return response payload
         """
-        invocation_type = kwargs.get("invocation_type", "RequestResponse")
-
         print("Calling function...")
 
         response = client.invoke(
             FunctionName=func_name,
-            InvocationType=invocation_type,
+            InvocationType="RequestResponse",
             Payload=json.dumps({
                 "original_key": self.original.name,
                 "path": f"users/{self.username}/memes"
@@ -188,7 +186,7 @@ class Meme(models.Model):
 
         if self.content_type in ("image/jpeg", "image/png"):
             # Resize images
-            payload = self.invoke_resize_function("resize_image_meme", invocation_type="Event")
+            payload = self.invoke_resize_function("resize_image_meme")
         elif self.content_type.startswith("video/"):
             # Resize videos
             payload = self.invoke_resize_function("resize_video_ffprobe_testing")
