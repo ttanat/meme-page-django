@@ -365,7 +365,34 @@ def delete(request, model, identifier=None):
         if password and request.user.check_password(password):
             if model == "page":
                 Page.objects.get(admin=request.user, name=identifier).delete()
+
             elif model == "user":
+                
+                # Remove following
+                request.user.follows.remove(*request.user.follows.all())    # Using .clear() instead of remove will not send signal
+
+                # Remove subscriptions
+                for page in request.user.subscriptions.all():
+                    page.subscribers.remove(request.user)
+                # Have to do multiple queries like this instead of
+                # request.user.subscriptions.remove(*request.user.subscriptions.all()) because of notify_subscribe signal
+
+                # Delete all memes (must use for loop to send signal to delete files)
+                for meme in request.user.meme_set.all():
+                    meme.delete()
+
+                # Get all of user's comments
+                comments = request.user.comment_set.all()
+                # Decrement number of comments by 1 on memes before deleting comments
+                # (only by 1 even if user commented on meme multiple times) (good enough)
+                Meme.objects.filter(id__in=comments.values_list("meme_id", flat=True)).update(num_comments=F("num_comments") - 1)
+                # Delete all comments (also for loop for comments with images)
+                for comment in comments.filter(image__isnull=False):
+                    comment.delete()
+                # Delete remaining comments
+                request.user.comment_set.all().delete()
+
+                # Delete user
                 request.user.delete()
         else:
             return HttpResponseBadRequest("Password incorrect")
