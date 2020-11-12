@@ -283,6 +283,10 @@ class Comment(models.Model):
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="comments")
     meme_uuid = models.CharField(max_length=11, blank=False)
 
+    """ For comments that are replies """
+    # Root comment
+    root = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="children")
+    # Comment directly being replied to
     reply_to = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
 
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)

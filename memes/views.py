@@ -230,26 +230,35 @@ def comment(request, action):
 @permission_classes([IsAuthenticated])
 def reply(request):
     """ Reply to comments """
-    c_uuid = request.POST.get("c_uuid")
+    root_uuid = request.POST.get("root_uuid")
+    reply_to_uuid = request.POST.get("reply_to_uuid")
     content = request.POST.get("content", "")[:150].strip()
     image = request.FILES.get("image")
-    if not c_uuid or (not content and not image):
+
+    if not root_uuid or not reply_to_uuid or (not content and not image):
         return HttpResponseBadRequest()
 
     if image and not image.name.endswith((".jpg", ".png", ".jpeg")):
         return HttpResponseBadRequest()
 
-    reply_to = get_object_or_404(
+    root = get_object_or_404(
         Comment.objects.select_related("meme").only("meme__id", "meme_uuid"),
-        uuid=c_uuid,
+        uuid=root_uuid,
+        deleted=False
+    )
+
+    reply_to = get_object_or_404(
+        Comment.objects.only("id"),
+        uuid=reply_to_uuid,
         deleted=False
     )
 
     new_reply = Comment.objects.create(
         user=request.user,
         username=request.user.username,
-        meme=reply_to.meme,
-        meme_uuid=reply_to.meme_uuid,
+        meme=root.meme,
+        meme_uuid=root.meme_uuid,
+        root=root,
         reply_to=reply_to,
         content=content,
         image=image

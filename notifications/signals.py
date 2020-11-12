@@ -66,11 +66,13 @@ comment_posted_signal = Signal(providing_args=["instance"])
 @receiver(comment_posted_signal, sender=Comment)
 def notify_comment(sender, instance, **kwargs):
     # If instance is a reply
-    if instance.reply_to_id:
-        # Update number of replies
-        Comment.objects.filter(id=instance.reply_to_id).update(num_replies=F("num_replies") + 1)
+    if instance.root_id:
+        # Update number of replies on root comment
+        Comment.objects.filter(id=instance.root_id).update(num_replies=F("num_replies") + 1)
 
+        # Get comment that was directly replied to
         reply_to = Comment.objects.select_related("user").only("num_replies", "user__id").get(id=instance.reply_to_id)
+        # Get user who posted reply
         actor = User.objects.only("image", "username").get(id=instance.user_id)
         if reply_to.user.id != instance.user_id:
             Notification.objects.create(
