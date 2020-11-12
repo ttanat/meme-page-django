@@ -177,7 +177,10 @@ def comment(request, action):
         uuid = request.POST.get("uuid")
         content = request.POST.get("content", "")[:150].strip()
         image = request.FILES.get("image")
-        if not uuid or (not content and not image) or not image.name.endswith((".jpg", ".png", ".jpeg")):
+        if not uuid or (not content and not image):
+            return HttpResponseBadRequest()
+
+        if image and not image.name.endswith((".jpg", ".png", ".jpeg")):
             return HttpResponseBadRequest()
 
         meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
@@ -230,7 +233,10 @@ def reply(request):
     c_uuid = request.POST.get("c_uuid")
     content = request.POST.get("content", "")[:150].strip()
     image = request.FILES.get("image")
-    if not c_uuid or (not content and not image) or not image.name.endswith((".jpg", ".png", ".jpeg")):
+    if not c_uuid or (not content and not image):
+        return HttpResponseBadRequest()
+
+    if image and not image.name.endswith((".jpg", ".png", ".jpeg")):
         return HttpResponseBadRequest()
 
     reply_to = get_object_or_404(
