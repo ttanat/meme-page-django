@@ -206,7 +206,9 @@ class ReplyViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        return Comment.objects.filter(reply_to_uuid=self.request.query_params["u"]).order_by("id")
+        comment_id = Comment.objects.values_list("id", flat=True).get(uuid=self.request.query_params["u"])
+
+        return Comment.objects.filter(reply_to_id=comment_id).order_by("id")
 
 
 class SearchListPagination(pagination.PageNumberPagination):

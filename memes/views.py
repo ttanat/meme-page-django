@@ -245,7 +245,6 @@ def reply(request):
         meme=reply_to.meme,
         meme_uuid=reply_to.meme_uuid,
         reply_to=reply_to,
-        reply_to_uuid=c_uuid,
         content=content,
         image=image
     )

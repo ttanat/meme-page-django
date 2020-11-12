@@ -283,8 +283,7 @@ class Comment(models.Model):
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="comments")
     meme_uuid = models.CharField(max_length=11, blank=False)
 
-    reply_to = models.ForeignKey("Comment", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
-    reply_to_uuid = models.CharField(max_length=11, blank=True)
+    reply_to = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
 
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     post_date = models.DateTimeField(auto_now_add=True)
