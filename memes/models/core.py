@@ -110,6 +110,8 @@ class Meme(models.Model):
     dank = models.BooleanField(default=False)
     caption = models.CharField(max_length=100, blank=True)
     upload_date = models.DateTimeField(auto_now_add=True)
+    num_likes = models.PositiveIntegerField(default=0)
+    num_dislikes = models.PositiveIntegerField(default=0)
     points = models.IntegerField(default=0)
     num_comments = models.PositiveIntegerField(default=0)
     nsfw = models.BooleanField(default=False)

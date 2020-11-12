@@ -39,24 +39,48 @@ def delete_meme(sender, instance, **kwargs):
 
 @receiver(post_save, sender=MemeLike)
 def vote_meme(sender, instance, created, **kwargs):
-    # Calculate point change
-    change = instance.point if created else instance.point * 2
+    """
+    Update fields when new vote is created or when vote is changed
 
+    Scenarios: like created, dislike created, like changed to dislike, dislike changed to like
+    """
     like_created = created and instance.point == 1
     if like_created:
         # Extra fields selected to use when creating notification
         meme = Meme.objects.select_related("user") \
-                           .only("points", "uuid", "thumbnail", "user__id") \
+                           .only("num_likes", "points", "uuid", "thumbnail", "user__id") \
                            .get(id=instance.meme_id)
         uid = meme.user.id
     else:
-        meme = Meme.objects.only("points", "user").get(id=instance.meme_id)
+        # Select both num_likes and num_dislikes even if scenario is 'dislike created' (good enough)
+        meme = Meme.objects.only("num_likes", "num_dislikes", "points", "user").get(id=instance.meme_id)
         uid = meme.user_id
 
-    # Update points on meme and update clout on user who posted that
+    # Calculate point change
+    change = instance.point if created else instance.point * 2
+
     new_points = meme.points + change    # Do this so no need to call .refresh_from_db()
+    # Update points on meme
     meme.points = F("points") + change
-    meme.save(update_fields=["points"])
+    # Update num_likes and/or num_dislikes field on meme
+    if instance.point == 1:
+        # Set field to update
+        field = "num_likes"
+        # Update num_likes
+        meme.num_likes = F("num_likes") + 1
+        if not created:
+            meme.num_dislikes = F("num_dislikes") - 1
+    elif instance.point == -1:
+        # Set field to update
+        field = "num_dislikes"
+        # Update num_dislikes
+        meme.num_dislikes = F("num_dislikes") + 1
+        if not created:
+            meme.num_likes = F("num_likes") - 1
+
+    meme.save(update_fields=(field, "points") if created else ("num_likes", "num_dislikes", "points"))
+
+    # Update clout on user who posted that
     Profile.objects.filter(user_id=uid).update(clout=F("clout") + change)
 
     # Notify if vote is a like and user is not liking their own meme
@@ -92,7 +116,9 @@ def vote_comment(sender, instance, created, **kwargs):
 
 @receiver(pre_delete, sender=MemeLike)
 def unvote_meme(sender, instance, **kwargs):
-    Meme.objects.filter(uuid=instance.meme_uuid).update(points=F("points") - instance.point)
+    field = "num_likes" if instance.point == 1 else "num_dislikes"
+    Meme.objects.filter(uuid=instance.meme_uuid) \
+                .update(**{"points": F("points") - instance.point, field: F(field) - 1})
     Profile.objects.filter(user_id=instance.meme.user_id).update(clout=F("clout") - instance.point)
 
 
