@@ -177,7 +177,7 @@ def comment(request, action):
         uuid = request.POST.get("uuid")
         content = request.POST.get("content", "")[:150].strip()
         image = request.FILES.get("image")
-        if not uuid or (not content and not image):
+        if not uuid or (not content and not image) or not image.name.endswith((".jpg", ".png", ".jpeg")):
             return HttpResponseBadRequest()
 
         meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
@@ -230,7 +230,7 @@ def reply(request):
     c_uuid = request.POST.get("c_uuid")
     content = request.POST.get("content", "")[:150].strip()
     image = request.FILES.get("image")
-    if not c_uuid or (not content and not image):
+    if not c_uuid or (not content and not image) or not image.name.endswith((".jpg", ".png", ".jpeg")):
         return HttpResponseBadRequest()
 
     reply_to = get_object_or_404(
@@ -271,8 +271,9 @@ def upload(request):
             # category = get_object_or_404(Category, name=category_name)
             category = Category.objects.get_or_create(name=category_name)[0]    # Change this before deployment
 
+        # Check content type and file extension is valid
         if (content_type not in Meme.ContentType.values
-                or (content_type == "video/quicktime" and not file.name.endswith(".mov"))):
+                or not file.name.lower().endswith((".jpg", ".png", ".jpeg", ".mp4", ".mov", ".gif"))):
             return JsonResponse({"success": False, "message": "Unsupported file type"})
 
         if page_name:

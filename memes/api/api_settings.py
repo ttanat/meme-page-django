@@ -31,7 +31,8 @@ def user_settings(request):
                 return HttpResponseBadRequest()
 
             new_img = request.FILES["image"]
-            if new_img.content_type not in ("image/jpeg", "image/png"):
+            if (new_img.content_type not in ("image/jpeg", "image/png")
+                    or not new_img.name.lower().endswith((".jpg", ".png", ".jpeg"))):
                 return HttpResponseBadRequest("Supported media types: JPEG, PNG")
 
             user.image.delete()
@@ -116,14 +117,26 @@ class PageSettings(APIView):
             if "image" in request.FILES:
                 page = self.get_object(request.user, name, ("name", "image"))
                 img = request.FILES["image"]
+                # Check valid image type
+                if not img.name.lower().endswith((".jpg", ".png", ".jpeg")):
+                    return HttpResponseBadRequest()
+                # Delete previous image
                 page.image.delete()
+                # Save new image
                 page.image.save(img.name, img)
+                # Resize new image
                 page.resize_image()
             elif "cover" in request.FILES:
                 page = self.get_object(request.user, name, ("name", "cover"))
                 cover = request.FILES["cover"]
+                # Check valid image type
+                if not cover.name.lower().endswith((".jpg", ".png", ".jpeg")):
+                    return HttpResponseBadRequest()
+                # Delete previous image
                 page.cover.delete()
+                # Save new image
                 page.cover.save(cover.name, cover)
+                # Resize new image
                 page.resize_cover()
             else:
                 return HttpResponseBadRequest()
