@@ -8,7 +8,6 @@ from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 
 from secrets import token_urlsafe
-from PIL import Image
 from io import BytesIO
 import os, ffmpeg, boto3, json
 
@@ -39,12 +38,16 @@ class User(AbstractUser):
         return f"{self.username}"
 
     def resize_image(self):
-        client.invoke(
-            FunctionName="resize_profile_pic",
-            InvocationType="Event",
-            Payload=json.dumps({"name": self.image.name}),
-            Qualifier="$LATEST"
-        )
+        if self.image:
+            client.invoke(
+                FunctionName="resize_any_image",
+                InvocationType="Event",
+                Payload=json.dumps({
+                    "file_key": self.image.name,
+                    "dimensions": (400, 400),
+                }),
+                Qualifier="$LATEST"
+            )
 
     def delete(self, *args, **kwargs):
         self.image.delete()
@@ -306,11 +309,17 @@ class Comment(models.Model):
         return f"{self.user.username}: {self.content}"
 
     def resize_image(self):
-        img = Image.open(self.image.path)
-        n = 400 if self.reply_to else 480
-        if img.height > n or img.width > n:
-            img.thumbnail((n, n))
-            img.save(self.image.path)
+        if self.image:
+            dimension = 400 if self.reply_to else 480
+            client.invoke(
+                FunctionName="resize_any_image",
+                InvocationType="Event",
+                Payload=json.dumps({
+                    "file_key": self.image.name,
+                    "dimensions": (dimension, dimension),
+                }),
+                Qualifier="$LATEST"
+            )
 
     def delete(self, *args, **kwargs):
         if self.image:

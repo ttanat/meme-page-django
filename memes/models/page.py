@@ -5,6 +5,10 @@ from secrets import token_urlsafe
 from PIL import Image
 
 from .core import Meme, Comment, set_random_filename
+import boto3, json
+
+
+client = boto3.client('lambda', region_name=settings.AWS_S3_REGION_NAME)
 
 
 def page_directory_path(instance, filename):
@@ -39,16 +43,28 @@ class Page(models.Model):
         return f"{self.name}"
 
     def resize_image(self):
-        img = Image.open(self.image.path)
-        if img.height > 200 or img.width > 200:
-            img.thumbnail((200, 200))
-            img.save(self.image.path)
+        if self.image:
+            client.invoke(
+                FunctionName="resize_any_image",
+                InvocationType="Event",
+                Payload=json.dumps({
+                    "file_key": self.image.name,
+                    "dimensions": (200, 200),
+                }),
+                Qualifier="$LATEST"
+            )
 
     def resize_cover(self):
-        cover = Image.open(self.cover.path)
-        if cover.height > 150 or cover.width > 2000:
-            cover.thumbnail((2000, 150))
-            cover.save(self.cover.path)
+        if self.cover:
+            client.invoke(
+                FunctionName="resize_any_image",
+                InvocationType="Event",
+                Payload=json.dumps({
+                    "file_key": self.cover.name,
+                    "dimensions": (2000, 150),
+                }),
+                Qualifier="$LATEST"
+            )
 
     def delete(self, *args, **kwargs):
         self.image.delete()
