@@ -305,8 +305,9 @@ class Comment(models.Model):
     class Deleted(models.IntegerChoices):
         NO = 0, _("Not deleted"),
         USER = 1, _("Deleted by user")
-        MODERATOR = 2, _("Removed by moderator")
-        STAFF = 3, _("Deleted by staff")
+        MEME_OP = 2, _("Deleted by meme OP")
+        MODERATOR = 3, _("Removed by moderator")
+        STAFF = 4, _("Deleted by staff")
 
     deleted = models.PositiveSmallIntegerField(default=0, choices=Deleted.choices)
 
