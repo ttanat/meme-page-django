@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from secrets import token_urlsafe
 from PIL import Image
@@ -66,10 +68,13 @@ class Page(models.Model):
                 Qualifier="$LATEST"
             )
 
-    def delete(self, *args, **kwargs):
-        self.image.delete()
-        self.cover.delete()
-        super().delete(*args, **kwargs)
+
+@receiver(post_delete, sender=Page)
+def delete_page_image_and_cover(sender, instance, **kwargs):
+    if instance.image:
+        instance.image.delete(False)
+    if instance.cover:
+        instance.cover.delete(False)
 
 
 class Moderator(models.Model):

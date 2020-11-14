@@ -6,6 +6,8 @@ from django.core.files.base import ContentFile
 # from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from secrets import token_urlsafe
 from io import BytesIO
@@ -49,9 +51,11 @@ class User(AbstractUser):
                 Qualifier="$LATEST"
             )
 
-    def delete(self, *args, **kwargs):
-        self.image.delete()
-        super().delete(*args, **kwargs)
+
+@receiver(post_delete, sender=User)
+def delete_user_image(sender, instance, **kwargs):
+    if instance.image:
+        instance.image.delete(False)
 
 
 class Following(models.Model):
@@ -231,11 +235,12 @@ class Meme(models.Model):
 
     #     os.remove(old_path)
 
-    def delete(self, *args, **kwargs):
-        self.original.delete()
-        self.large.delete()
-        self.thumbnail.delete()
-        super().delete(*args, **kwargs)
+
+@receiver(post_delete, sender=Meme)
+def delete_meme_files(sender, instance, **kwargs):
+    instance.original.delete(False)
+    instance.large.delete(False)
+    instance.thumbnail.delete(False)
 
 
 class Tag(models.Model):
@@ -324,10 +329,11 @@ class Comment(models.Model):
                 Qualifier="$LATEST"
             )
 
-    def delete(self, *args, **kwargs):
-        if self.image:
-            self.image.delete()
-        super().delete(*args, **kwargs)
+
+@receiver(post_delete, sender=Comment)
+def delete_comment_image(sender, instance, **kwargs):
+    if instance.image:
+        instance.image.delete(False)
 
 
 class Like(models.Model):
