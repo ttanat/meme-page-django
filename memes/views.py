@@ -389,20 +389,16 @@ def delete(request, model, identifier=None):
                 # Have to do multiple queries like this instead of
                 # request.user.subscriptions.remove(*request.user.subscriptions.all()) because of notify_subscribe signal
 
-                # Delete all memes (must use for loop to send signal to delete files)
-                for meme in request.user.meme_set.all():
-                    meme.delete()
+                # Delete all of user's memes
+                request.user.meme_set.all().delete()
 
                 # Get all of user's comments
                 comments = request.user.comment_set.all()
                 # Decrement number of comments by 1 on memes before deleting comments
                 # (only by 1 even if user commented on meme multiple times) (good enough)
                 Meme.objects.filter(id__in=comments.values_list("meme_id", flat=True)).update(num_comments=F("num_comments") - 1)
-                # Delete all comments (also for loop for comments with images)
-                for comment in comments.filter(image__isnull=False):
-                    comment.delete()
-                # Delete remaining comments
-                request.user.comment_set.all().delete()
+                # Delete all of user's comments
+                comments.delete()
 
                 # Delete user
                 request.user.delete()
