@@ -36,9 +36,7 @@ def user_settings(request):
                     or not check_valid_file_ext(new_img.name, (".jpg", ".png", ".jpeg"))):
                 return HttpResponseBadRequest("Supported media types: JPEG, PNG")
 
-            user.image.delete()
-            user.image.save(new_img.name, new_img)
-            user.resize_image()
+            user.add_profile_image(new_img)
 
         elif field == "nsfw":
             user.show_nsfw = request.POST.get("show_nsfw") == "true"
@@ -83,6 +81,7 @@ def user_settings(request):
 
         if request.GET["f"] == "image":
             user.image.delete()
+            user.small_image.delete()
 
         return HttpResponse(status=204)
 

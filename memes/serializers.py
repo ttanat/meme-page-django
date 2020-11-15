@@ -19,7 +19,7 @@ class MemeSerializer(serializers.ModelSerializer):
 
     def get_dp_url(self, obj):
         try:
-            return obj.user.image.url # change to obj.small_image.url
+            return obj.user.small_image.url
         except ValueError:
             return ""
 
@@ -63,7 +63,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_dp_url(self, obj):
         try:
-            return "" if obj.deleted else obj.user.image.url
+            return "" if obj.deleted else obj.user.small_image.url
         except ValueError:
             return ""
 
@@ -100,7 +100,7 @@ class ReplySerializer(serializers.ModelSerializer):
 
     def get_dp_url(self, obj):
         try:
-            return obj.user.image.url
+            return obj.user.small_image.url
         except ValueError:
             return ""
 

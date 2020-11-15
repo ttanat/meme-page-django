@@ -34,6 +34,7 @@ def user_directory_path_profile(instance, filename):
 
 class User(AbstractUser):
     image = models.ImageField(upload_to=user_directory_path_profile, null=True, blank=True)
+    small_image = models.ImageField(upload_to=user_directory_path_profile, null=True, blank=True)
     follows = models.ManyToManyField(settings.AUTH_USER_MODEL, symmetrical=False, related_name="followers", through="Following")
     nsfw = models.BooleanField(default=False)
     show_nsfw = models.BooleanField(default=False)
@@ -41,15 +42,37 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username}"
 
-    def resize_image(self):
+    def add_profile_image(self, file):
+        # Delete existing images
         if self.image:
-            resize_any_image(self.image.name, (400, 400))
+            self.image.delete(False)
+        if self.small_image:
+            self.small_image.delete(False)
+
+        # Save new profile image
+        self.image.save(file.name, file, False)
+        # Save name of new profile image
+        self.small_image.name = user_directory_path_profile(self, file.name)
+        self.save(update_fields=("image", "small_image"))
+
+        # Resize new images
+        client.invoke(
+            FunctionName="resize_profile_image",
+            InvocationType="Event",
+            Payload=json.dumps({
+                "image_key": self.image.name,
+                "small_image_key": self.small_image.name,
+            }),
+            Qualifier="$LATEST"
+        )
 
 
 @receiver(post_delete, sender=User)
 def delete_user_image(sender, instance, **kwargs):
     if instance.image:
         instance.image.delete(False)
+    if instance.small_image:
+        instance.small_image.delete(False)
 
 
 class Following(models.Model):
