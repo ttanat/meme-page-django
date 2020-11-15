@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from datetime import timedelta
 from random import randint
-import re
+import re, os
 
 
 @api_view(["GET"])
@@ -68,10 +68,15 @@ def meme_view(request, uuid):
 @api_view(["GET"])
 def full_res(request, obj, uuid):
     if obj == "m":
-        meme = get_object_or_404(Meme.objects.only("large"), uuid=uuid)
-        return JsonResponse({
-            "url": meme.get_file_url()
-        })
+        meme = get_object_or_404(Meme.objects.only("original", "large"), uuid=uuid)
+        # Get original file if large is webp
+        if os.path.splitext(meme.large.name)[1].lower() == ".webp":
+            url = meme.original.url
+        else:
+            url = meme.get_file_url()
+
+        return JsonResponse({"url": url})
+
     elif obj == "c":
         comment = get_object_or_404(Comment.objects.only("image", "meme_uuid"), uuid=uuid)
         if not comment.image:
