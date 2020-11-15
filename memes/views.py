@@ -294,6 +294,13 @@ def upload(request):
     category_name = request.POST.get("category")
 
     if file:
+        # Check file size is valid
+        ext = os.path.splitext(file.name)[1].lower()
+        if ext in (".jpg", ".png", ".jpeg", ".gif") and file.size > 5242880:
+            return JsonResponse({"success": False, "message": "Maximum image file size is 5 MB"}) 
+        if ext in (".mp4", ".mov") and file.size > 10485760:
+            return JsonResponse({"success": False, "message": "Maximum video file size is 10 MB"}) 
+
         # Check upload limits (50 per hour and 200 per day)
         past_upload = Meme.objects.filter(user=request.user).aggregate(
             hour=Count("upload_date", filter=Q(upload_date__gt=timezone.now()-timedelta(hours=1))),
