@@ -132,6 +132,10 @@ def like(request):
 
                     return HttpResponse()
             except MemeLike.DoesNotExist:
+                # Maximum 200 likes/dislikes per hour
+                if MemeLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
+                    return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
+
                 # Create a like/dislike
                 m = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
                 MemeLike.objects.create(user=request.user, meme=m, meme_uuid=uuid, point=point)
@@ -155,6 +159,10 @@ def like(request):
 
                     return HttpResponse()
             except CommentLike.DoesNotExist:
+                # Maximum 200 likes/dislikes per hour
+                if CommentLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
+                    return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
+
                 # Create a like/dislike
                 c = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
                 CommentLike.objects.create(user=request.user, comment=c, comment_uuid=uuid, point=point)
