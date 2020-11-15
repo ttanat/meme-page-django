@@ -5,6 +5,7 @@ from django.db.models import F, Q, Count
 from django.utils import timezone
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User, Profile
+from .utils import check_valid_file_ext
 from analytics.signals import meme_viewed_signal, upload_signal
 
 from rest_framework.decorators import api_view, permission_classes
@@ -194,7 +195,7 @@ def comment(request, action):
         if not uuid or (not content and not image):
             return HttpResponseBadRequest()
 
-        if image and not image.name.endswith((".jpg", ".png", ".jpeg")):
+        if image and not check_valid_file_ext(image.name, (".jpg", ".png", ".jpeg")):
             return HttpResponseBadRequest()
 
         meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
@@ -252,7 +253,7 @@ def reply(request):
     if not root_uuid or not reply_to_uuid or (not content and not image):
         return HttpResponseBadRequest()
 
-    if image and not image.name.endswith((".jpg", ".png", ".jpeg")):
+    if image and not check_valid_file_ext(image.name, (".jpg", ".png", ".jpeg")):
         return HttpResponseBadRequest()
 
     root = get_object_or_404(
@@ -311,7 +312,7 @@ def upload(request):
 
         # Check content type and file extension is valid
         if (content_type not in Meme.ContentType.values
-                or not file.name.lower().endswith((".jpg", ".png", ".jpeg", ".mp4", ".mov", ".gif"))):
+                or not check_valid_file_ext(file.name, (".jpg", ".png", ".jpeg", ".mp4", ".mov", ".gif"))):
             return JsonResponse({"success": False, "message": "Unsupported file type"})
 
         if page_name:
