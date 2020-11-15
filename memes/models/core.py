@@ -175,11 +175,11 @@ class Meme(models.Model):
         print(response)
         print()
 
-        if response["statusCode"] == 200:
-            return response["body"]
-        elif response["statusCode"] == 418:
+        if response.get("statusCode") == 200:
+            return response.get("body")
+        elif response.get("statusCode") == 418:
             self.delete()
-            raise ValidationError(response["errorMessage"])
+            raise ValidationError(response.get("errorMessage"))
 
         self.delete()
         raise InternalError("Resize failed")
