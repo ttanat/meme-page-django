@@ -9,6 +9,8 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
+from memes.utils import resize_any_image
+
 from secrets import token_urlsafe
 from io import BytesIO
 import os, ffmpeg, boto3, json
@@ -41,15 +43,7 @@ class User(AbstractUser):
 
     def resize_image(self):
         if self.image:
-            client.invoke(
-                FunctionName="resize_any_image",
-                InvocationType="Event",
-                Payload=json.dumps({
-                    "file_key": self.image.name,
-                    "dimensions": (400, 400),
-                }),
-                Qualifier="$LATEST"
-            )
+            resize_any_image(self.image.name, (400, 400))
 
 
 @receiver(post_delete, sender=User)
@@ -196,6 +190,8 @@ class Meme(models.Model):
         if self.content_type in ("image/jpeg", "image/png"):
             # Resize images
             payload = self.invoke_resize_function("resize_image_meme")
+            # Then resize original image
+            resize_any_image(self.original.name, (960, 960))
         elif self.content_type.startswith("video/"):
             # Resize videos
             payload = self.invoke_resize_function("resize_video_meme_1")
@@ -320,15 +316,7 @@ class Comment(models.Model):
     def resize_image(self):
         if self.image:
             dimension = 400 if self.reply_to else 480
-            client.invoke(
-                FunctionName="resize_any_image",
-                InvocationType="Event",
-                Payload=json.dumps({
-                    "file_key": self.image.name,
-                    "dimensions": (dimension, dimension),
-                }),
-                Qualifier="$LATEST"
-            )
+            resize_any_image(self.image.name, (dimension, dimension))
 
 
 @receiver(post_delete, sender=Comment)

@@ -3,14 +3,12 @@ from django.conf import settings
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
+from memes.utils import resize_any_image
+from .core import Meme, Comment, set_random_filename
+
 from secrets import token_urlsafe
 from PIL import Image
-
-from .core import Meme, Comment, set_random_filename
 import boto3, json
-
-
-client = boto3.client('lambda', region_name=settings.AWS_S3_REGION_NAME)
 
 
 def page_directory_path(instance, filename):
@@ -46,27 +44,11 @@ class Page(models.Model):
 
     def resize_image(self):
         if self.image:
-            client.invoke(
-                FunctionName="resize_any_image",
-                InvocationType="Event",
-                Payload=json.dumps({
-                    "file_key": self.image.name,
-                    "dimensions": (200, 200),
-                }),
-                Qualifier="$LATEST"
-            )
+            resize_any_image(self.image.name, (200, 200))
 
     def resize_cover(self):
         if self.cover:
-            client.invoke(
-                FunctionName="resize_any_image",
-                InvocationType="Event",
-                Payload=json.dumps({
-                    "file_key": self.cover.name,
-                    "dimensions": (2000, 150),
-                }),
-                Qualifier="$LATEST"
-            )
+            resize_any_image(self.cover.name, (2000, 150))
 
 
 @receiver(post_delete, sender=Page)
