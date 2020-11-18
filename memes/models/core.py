@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
-from memes.utils import resize_any_image
+from memes.utils import check_valid_file_ext, resize_any_image
 
 from secrets import token_urlsafe
 from io import BytesIO
@@ -121,15 +121,6 @@ class Meme(models.Model):
     # Thumbnail (400x400) (WEBP)
     thumbnail = models.ImageField(null=True, blank=True)
 
-    class ContentType(models.TextChoices):
-        JPEG = "image/jpeg", _("JPEG")
-        PNG = "image/png", _("PNG")
-        GIF = "image/gif", _("GIF")
-        MP4 = "video/mp4", _("MP4")
-        MOV = "video/quicktime", _("MOV")
-
-    content_type = models.CharField(max_length=15, blank=False, choices=ContentType.choices)
-
     uuid = models.CharField(max_length=11, default=set_uuid, unique=True)
     dank = models.BooleanField(default=False)
     caption = models.CharField(max_length=100, blank=True)
@@ -172,6 +163,9 @@ class Meme(models.Model):
 
         raise InternalError()
 
+    def get_original_ext(self):
+        return os.path.splitext(self.original.name)[1].lower()
+
     def invoke_resize_function(self, func_name: str) -> list:
         """
         func_name: name of AWS lambda function
@@ -210,15 +204,17 @@ class Meme(models.Model):
     def resize_file(self):
         print("Choosing resize function...")
 
-        if self.content_type in ("image/jpeg", "image/png"):
+        if check_valid_file_ext(self.original.name, (".jpg", ".png", ".jpeg")):
             # Resize images
             payload = self.invoke_resize_function("resize_image_meme")
             # Then resize original image
             resize_any_image(self.original.name, (960, 960))
-        elif self.content_type.startswith("video/"):
+
+        elif check_valid_file_ext(self.original.name, (".mp4", ".mov")):
             # Resize videos
             payload = self.invoke_resize_function("resize_video_meme_1")
-        elif self.content_type == "image/gif":
+
+        elif check_valid_file_ext(self.original.name, (".gif",)):
             # Resize gifs
             payload = self.invoke_resize_function("resize_gif")
 

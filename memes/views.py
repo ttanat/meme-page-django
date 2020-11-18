@@ -31,7 +31,7 @@ def meme_view(request, uuid):
             "page_private",
             "uuid",
             "caption",
-            "content_type",
+            "original",
             "large",
             "points",
             "num_comments",
@@ -57,7 +57,7 @@ def meme_view(request, uuid):
         "pdname": meme.page_display_name,
         "uuid": meme.uuid,
         "caption": meme.caption,
-        "content_type": meme.content_type,
+        "is_gif": meme.get_original_ext() == ".gif",
         "url": meme.get_file_url(),
         "points": meme.points,
         "num_comments": meme.num_comments,
@@ -290,7 +290,6 @@ def upload(request):
     file = request.FILES.get("file")
     caption = request.POST.get("caption", "")[:100]
     nsfw = request.POST.get("nsfw") == "true"
-    content_type = file.content_type if file else None
     category_name = request.POST.get("category")
 
     if file:
@@ -318,7 +317,7 @@ def upload(request):
             category = Category.objects.get_or_create(name=category_name)[0]    # Change this before deployment
 
         # Check content type and file extension is valid
-        if (content_type not in Meme.ContentType.values
+        if (file.content_type not in ("image/jpeg", "image/png", "image/gif", "video/mp4", "video/quicktime")
                 or not check_valid_file_ext(file.name, (".jpg", ".png", ".jpeg", ".mp4", ".mov", ".gif"))):
             return JsonResponse({"success": False, "message": "Unsupported file type"})
 
@@ -342,7 +341,6 @@ def upload(request):
             page_display_name=page.display_name if page else "",
             original=file,
             caption=caption,
-            content_type=content_type,
             nsfw=nsfw,
             category=category,
             ip_address=ip
@@ -359,7 +357,7 @@ def upload(request):
 
         if request.POST.get("is_profile_page"):
             response = {"success": True, "uuid": meme.uuid}
-            if meme.content_type.startswith("video/"):
+            if file.content_type.startswith("video/"):
                 response["thumbnail"] = meme.get_thumbnail_url()
 
             return JsonResponse(response, status=201)

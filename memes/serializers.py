@@ -7,12 +7,16 @@ from django.contrib.auth import authenticate
 
 
 class MemeSerializer(serializers.ModelSerializer):
+    is_gif = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
     dp_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Meme
-        fields = ("username", "uuid", "caption", "content_type", "url", "points", "num_comments", "dp_url")
+        fields = ("username", "uuid", "caption", "is_gif", "url", "points", "num_comments", "dp_url")
+
+    def get_is_gif(self, obj):
+        return obj.get_original_ext() == ".gif"
 
     def get_url(self, obj):
         return obj.get_file_url()
@@ -30,7 +34,7 @@ class FullMemeSerializer(MemeSerializer):
 
     class Meta:
         model = Meme
-        fields = ("username", "pname", "pdname", "uuid", "caption", "content_type", "url", "points", "num_comments", "dp_url")
+        fields = ("username", "pname", "pdname", "uuid", "caption", "is_gif", "url", "points", "num_comments", "dp_url")
 
     def get_pname(self, obj):
         return obj.page_name
@@ -150,19 +154,23 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class ProfileMemesSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
+    file_ext = serializers.SerializerMethodField()
 
     class Meta:
         model = Meme
-        fields = ("uuid", "url", "points", "content_type")
+        fields = ("uuid", "url", "points", "file_ext")
 
     def get_url(self, obj):
         return obj.get_thumbnail_url()
+
+    def get_file_ext(self, obj):
+        return obj.get_original_ext()
 
 
 class UserMemesSerializer(ProfileMemesSerializer):
     class Meta:
         model = Meme
-        fields = ("uuid", "url", "content_type")
+        fields = ("uuid", "url", "file_ext")
 
 
 class ProfileCommentsSerializer(serializers.ModelSerializer):

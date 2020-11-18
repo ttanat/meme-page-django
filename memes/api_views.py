@@ -51,7 +51,6 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         memes = Meme.objects.defer(
-            "original",
             "thumbnail",
             "upload_date",
             "nsfw",
