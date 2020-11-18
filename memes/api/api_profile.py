@@ -57,7 +57,7 @@ class ProfileMemesViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Meme.objects.filter(user=self.request.user)
+        return Meme.objects.only("uuid", "thumbnail", "points", "original").filter(user=self.request.user)
 
 
 class UserMemesViewSet(ProfileMemesViewSet):
@@ -69,7 +69,9 @@ class UserMemesViewSet(ProfileMemesViewSet):
         if "u" not in self.request.GET:
             raise ParseError
 
-        return Meme.objects.filter(username=self.request.GET["u"], page_private=False).order_by("-id")
+        return Meme.objects.only("uuid", "thumbnail", "original") \
+                           .filter(username=self.request.GET["u"], page_private=False) \
+                           .order_by("-id")
 
         """
         Intentionally leave out memes on private pages that both users are subscribed to because query is too complicated
