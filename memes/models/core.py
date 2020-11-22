@@ -207,8 +207,6 @@ class Meme(models.Model):
         if check_valid_file_ext(self.original.name, (".jpg", ".png", ".jpeg")):
             # Resize images
             payload = self.invoke_resize_function("resize_image_meme")
-            # Then resize original image
-            resize_any_image(self.original.name, (960, 960))
 
         elif check_valid_file_ext(self.original.name, (".mp4", ".mov")):
             # Resize videos
