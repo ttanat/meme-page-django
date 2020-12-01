@@ -37,11 +37,11 @@ class MemeReport(APIView):
 
         meme = get_object_or_404(Meme.objects.only("page"), uuid=uuid)
 
-        # Only staff and moderators of page can get reports for meme
+        # Only staff and moderators of page or admin can get reports for meme
         if not request.user.is_staff:
             if meme.page_id:
-                page = get_object_or_404(Page.objects.only("id"), id=meme.page_id)
-                if not page.moderators.filter(id=request.user.id).exists():
+                page = get_object_or_404(Page.objects.only("id", "admin"), id=meme.page_id)
+                if page.admin_id != request.user.id or not page.moderators.filter(id=request.user.id).exists():
                     return HttpResponse("Cannot get reports", status=403)
             else:
                 return HttpResponse("Cannot get reports", status=403)
