@@ -13,7 +13,9 @@ client = boto3.client('lambda', region_name=settings.AWS_S3_REGION_NAME)
 
 def resize_any_image(file_key: str, dimensions: tuple):
     """ Invoke lambda function to resize image and overwrite original image """
+
     assert len(dimensions) == 2
+    assert isinstance(dimensions[0], int) and isinstance(dimensions[1], int)
 
     client.invoke(
         FunctionName="resize_any_image",
