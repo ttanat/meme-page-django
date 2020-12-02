@@ -6,7 +6,7 @@ from .models import Report
 from memes.models import Meme, Comment, Page, User
 
 from rest_framework.views import APIView
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
@@ -28,6 +28,9 @@ class MemeReport(APIView):
             reason=request.POST["reason"],
             message=request.POST.get("message", "")
         )
+
+        meme.num_reports = F("num_reports") + 1
+        meme.save(update_fields=["num_reports"])
 
         return HttpResponse(status=201)
 
@@ -52,3 +55,35 @@ class MemeReport(APIView):
             "count": reports.count(),
             "reports": reports[:50]
         })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_num_meme_reports(request):
+    """ Get number of reports for each meme with uuid in query params """
+
+    if "uuid" not in request.query_params:
+        return HttpResponseBadRequest()
+
+    # Get list of uuids
+    uuids = request.query_params.getlist("uuid")[:20]
+    if not uuids:
+        return JsonResponse([], safe=False)
+
+    if "page" in request.query_params:
+        # Get meme page that request is being sent from
+        page = get_object_or_404(Page.objects.only("id", "admin"), name=request.query_params["page"])
+
+        # Check that request is sent by moderator or admin of page or staff
+        if (not request.user.is_staff and
+                page.admin_id != request.user.id and
+                    not page.moderators.filter(id=request.user.id).exists()):
+            return HttpResponse("Cannot get reports", status=403)
+
+        return Response(Meme.objects.filter(page=page, uuid__in=uuids).values("uuid", "num_reports"))
+
+    # Staff can get number of reports without being in a specific meme page
+    elif request.user.is_staff:
+        return Response(Meme.objects.filter(uuid__in=uuids).values("uuid", "num_reports"))
+
+    return HttpResponseBadRequest()
