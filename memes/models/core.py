@@ -134,6 +134,7 @@ class Meme(models.Model):
     tags = models.ManyToManyField("Tag", related_name="memes")
     # tags_list = ArrayField(models.CharField(max_length=64, blank=False), blank=True)
 
+    num_reports = models.PositiveIntegerField(default=0)
     num_views = models.PositiveIntegerField(default=0)
     ip_address = models.GenericIPAddressField(null=True)
     hidden = models.BooleanField(default=False)
