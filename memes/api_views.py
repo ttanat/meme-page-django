@@ -54,6 +54,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             "thumbnail",
             "upload_date",
             "nsfw",
+            "num_reports",
             "num_views",
             "ip_address",
             "hidden",
