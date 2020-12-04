@@ -167,11 +167,17 @@ class Meme(models.Model):
     def get_original_ext(self):
         return os.path.splitext(self.original.name)[1].lower()
 
-    def invoke_resize_function(self, func_name: str) -> list:
+    def invoke_lambda_function(self, func_name: str):
         """
         func_name: name of AWS lambda function
 
-        Invoke resize function for image/gif/video then return response payload
+        Invoke resize function for image
+        Returns list
+
+        OR
+
+        Invoke create thumbnail function for videos or gifs
+        Returns object {"thumbnail_path": <save this string to self.thumbnail.name>}
         """
         print("Calling function...")
 
@@ -186,12 +192,8 @@ class Meme(models.Model):
         )
 
         print("Done calling")
-
         response = json.loads(response["Payload"].read())
-
-        print()
-        print(response)
-        print()
+        print(f"\n{response}\n")
 
         if response.get("statusCode") == 200:
             return response.get("body")
@@ -200,54 +202,54 @@ class Meme(models.Model):
             raise ValidationError(response.get("errorMessage"))
 
         self.delete()
-        raise InternalError("Resize failed")
 
-    def resize_file(self):
-        print("Choosing resize function...")
+        raise InternalError(f"{'Create thumbnail' if func_name == 'create_meme_thumbnail' else 'Resize'} failed")
 
-        if check_valid_file_ext(self.original.name, (".jpg", ".png", ".jpeg")):
-            # Resize images
-            payload = self.invoke_resize_function("resize_image_meme")
+    def resize_video_or_gif(self):
+        # Create thumbnail and get thumbnail name from payload
+        payload = self.invoke_lambda_function("create_meme_thumbnail")
+        print(f"Payload:\n{payload}")
 
-        elif check_valid_file_ext(self.original.name, (".mp4", ".mov")):
-            # Resize videos
-            payload = self.invoke_resize_function("resize_video_meme_1")
+        self.thumbnail.name = payload["thumbnail_path"]
+        # Assign new name for large file
+        new_large_path = f"users/{self.username}/memes/large/{token_urlsafe(5)}.mp4"
+        self.large.name = new_large_path
+        # Save large and thumbnail names
+        self.save(update_fields=("large", "thumbnail"))
 
-        elif check_valid_file_ext(self.original.name, (".gif",)):
-            # Resize gifs
-            payload = self.invoke_resize_function("resize_gif")
+        # Invoke async function to resize video or gif meme
+        client.invoke(
+            FunctionName="resize_video_or_gif_meme",
+            InvocationType="Event",
+            Payload=json.dumps({
+                "original_key": self.original.name,
+                "save_large_to": self.large.name,
+            }),
+            Qualifier="$LATEST"
+        )
 
-        print("Done resizing")
-        print(payload)
+    def resize_image(self):
+        payload = self.invoke_lambda_function("resize_image_meme")
+        print(f"Payload:\n{payload}")
 
         for obj in payload:
             getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['filename']}"
 
         self.save(update_fields=[p["size"] for p in payload])
 
+    def resize_file(self):
+        print("Choosing resize function...")
+
+        if check_valid_file_ext(self.original.name, (".jpg", ".png", ".jpeg")):
+            # Resize images
+            self.resize_image()
+        elif check_valid_file_ext(self.original.name, (".mp4", ".mov", ".gif")):
+            # Resize videos or gifs
+            self.resize_video_or_gif()
+        else:
+            raise InternalError("Invalid file type")
+
         print("Done everything")
-
-    # def resize_video(self):
-    #     old_path = self.file.path
-    #     path_to_dir = os.path.split(old_path)[0]
-    #     new_path = os.path.join(path_to_dir, f"{set_uuid()}.mp4")
-
-    #     self.file.name = f"{os.path.split(self.file.name)[0]}/{new_fname}"
-
-    #     file = ffmpeg.input(old_path)
-    #     if self.content_type == "image/gif":
-    #         file.output(new_path, movflags="faststart", video_bitrate="0", crf="25", format="mp4", vcodec="libx264", pix_fmt="yuv420p", vf="scale=trunc(iw/2)*2:trunc(ih/2)*2")
-    #     elif self.content_type[:6] == "video/" and self.file.size > 102400:    # Resize if video is more than 100 kb
-    #         file.output(new_path, movflags="faststart", vcodec="libx264", crf="33", format="mp4", pix_fmt="yuv420p")
-    #     file.run()
-
-    #     if self.content_type == "video/quicktime":
-    #         self.content_type = "video/mp4"
-    #         self.save(update_fields=("file", "content_type"))
-    #     else:
-    #         self.save(update_fields=["file"])
-
-    #     os.remove(old_path)
 
 
 @receiver(post_delete, sender=Meme)
