@@ -50,12 +50,11 @@ class MemeSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     username = serializers.SerializerMethodField()
     content = serializers.SerializerMethodField()
-    image = serializers.SerializerMethodField()
     dp_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ("uuid", "username", "post_date", "edited", "content", "image", "points", "dp_url", "num_replies")
+        fields = ("uuid", "username", "post_date", "edited", "content", "points", "dp_url", "num_replies")
 
     def get_username(self, obj):
         return "" if obj.deleted else obj.username
@@ -63,17 +62,22 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_content(self, obj):
         return "" if obj.deleted else obj.content
 
-    def get_image(self, obj):
-        try:
-            return "" if obj.deleted else obj.image.url
-        except ValueError:
-            return ""
-
     def get_dp_url(self, obj):
         try:
             return "" if obj.deleted else obj.user.small_image.url
         except ValueError:
             return ""
+
+    def to_representation(self, obj):
+        representation = super().to_representation(obj)
+
+        if not obj.deleted:
+            try:
+                representation["image"] = obj.image.url
+            except ValueError:
+                pass
+
+        return representation
 
 
 class ReplySerializer(serializers.ModelSerializer):
