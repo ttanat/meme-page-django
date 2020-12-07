@@ -23,10 +23,12 @@ def register_user(sender, instance, created, **kwargs):
 def upload_meme(sender, instance, created, **kwargs):
     if created:
         Profile.objects.filter(user_id=instance.user_id).update(num_memes=F("num_memes") + 1)
-        instance.resize_file()
 
         if instance.page_id:
             Page.objects.filter(id=instance.page_id).update(num_posts=F("num_posts") + 1)
+
+        # Resize after incrementing so that if it fails, database can decrement without error
+        instance.resize_file()
 
 
 @receiver(pre_delete, sender=Meme)
