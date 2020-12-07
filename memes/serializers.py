@@ -55,7 +55,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ("uuid", "username", "post_date", "edited", "content", "image", "dp_url", "num_replies")
+        fields = ("uuid", "username", "post_date", "edited", "content", "image", "points", "dp_url", "num_replies")
 
     def get_username(self, obj):
         return "" if obj.deleted else obj.username
@@ -74,14 +74,6 @@ class CommentSerializer(serializers.ModelSerializer):
             return "" if obj.deleted else obj.user.small_image.url
         except ValueError:
             return ""
-
-
-class CommentFullSerializer(CommentSerializer):
-    points = serializers.IntegerField()
-
-    class Meta:
-        model = Comment
-        fields = ("uuid", "username", "post_date", "edited", "content", "image", "points", "dp_url", "num_replies")
 
 
 class ReplySerializer(serializers.ModelSerializer):

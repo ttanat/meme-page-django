@@ -175,17 +175,6 @@ class CommentViewSet(viewsets.ReadOnlyModelViewSet):
                if "before" in self.request.query_params else comments
 
 
-class CommentFullViewSet(CommentViewSet):
-    serializer_class = CommentFullSerializer
-    ordering_fields = ["id", "points"]
-
-    def get_queryset(self):
-        if "u" not in self.request.query_params:
-            raise ParseError
-
-        return Comment.objects.filter(root__isnull=True, meme_uuid=self.request.query_params["u"])
-
-
 class ReplyPagination(CommentPagination):
     page_size = 10
 

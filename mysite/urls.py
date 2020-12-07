@@ -24,7 +24,7 @@ router = routers.DefaultRouter()
 router.register("memes/pv", api_views.PrivateMemeViewSet, basename="Meme")
 router.register("memes", api_views.MemeViewSet, basename="Meme")
 
-router.register("comments", api_views.CommentFullViewSet, basename="Comment")
+router.register("comments", api_views.CommentViewSet, basename="Comment")
 router.register("replies", api_views.ReplyViewSet, basename="Comment")
 
 router.register("search/users", api_views.SearchUserViewSet)
