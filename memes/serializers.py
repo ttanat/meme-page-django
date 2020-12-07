@@ -11,16 +11,12 @@ import os
 
 
 class MemeSerializer(serializers.ModelSerializer):
-    is_gif = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
     dp_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Meme
-        fields = ("username", "uuid", "caption", "is_gif", "url", "points", "num_comments", "dp_url")
-
-    def get_is_gif(self, obj):
-        return obj.get_original_ext() == ".gif"
+        fields = ("username", "uuid", "caption", "url", "points", "num_comments", "dp_url")
 
     def get_url(self, obj):
         return obj.get_file_url()
@@ -33,6 +29,10 @@ class MemeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, obj):
         representation = super().to_representation(obj)
+
+        # Check if meme is GIF
+        if obj.get_original_ext() == ".gif":
+            representation["is_gif"] = True
 
         # Get fallback URL if browser doesn't accept image/webp
         if ("image/webp" not in self.context["request"].headers.get("Accept", "") and
@@ -48,7 +48,7 @@ class FullMemeSerializer(MemeSerializer):
 
     class Meta:
         model = Meme
-        fields = ("username", "pname", "pdname", "uuid", "caption", "is_gif", "url", "points", "num_comments", "dp_url")
+        fields = ("username", "pname", "pdname", "uuid", "caption", "url", "points", "num_comments", "dp_url")
 
     def get_pname(self, obj):
         return obj.page_name
