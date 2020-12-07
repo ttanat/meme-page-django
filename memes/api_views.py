@@ -46,7 +46,7 @@ class MemePagination(pagination.PageNumberPagination):
 
 
 class MemeViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = FullMemeSerializer
+    serializer_class = MemeSerializer
     pagination_class = MemePagination
 
     def get_queryset(self):
@@ -97,8 +97,6 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
 
             if not pname or not re.search("^[a-zA-Z0-9_]+$", pname):
                 raise NotFound
-
-            self.serializer_class = MemeSerializer
 
             return memes.filter(page_name=pname).defer("page_name", "page_display_name")
 

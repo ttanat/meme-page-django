@@ -34,27 +34,17 @@ class MemeSerializer(serializers.ModelSerializer):
         if obj.get_original_ext() == ".gif":
             representation["is_gif"] = True
 
+        # Get page name and display name if meme is posted to a page and request is not sent from a page
+        if not self.context["request"].query_params.get("p", "").startswith("page/") and obj.page_name:
+            representation["pname"] = obj.page_name
+            representation["pdname"] = obj.page_display_name or ""
+
         # Get fallback URL if browser doesn't accept image/webp
         if ("image/webp" not in self.context["request"].headers.get("Accept", "") and
                 os.path.splitext(obj.get_file_url().lower())[1] == ".webp"):
             representation["fallback"] = obj.original.url
 
         return representation
-
-
-class FullMemeSerializer(MemeSerializer):
-    pname = serializers.SerializerMethodField()
-    pdname = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Meme
-        fields = ("username", "pname", "pdname", "uuid", "caption", "url", "points", "num_comments", "dp_url")
-
-    def get_pname(self, obj):
-        return obj.page_name
-
-    def get_pdname(self, obj):
-        return obj.page_display_name
 
 
 class CommentSerializer(serializers.ModelSerializer):
