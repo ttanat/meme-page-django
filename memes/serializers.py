@@ -1,9 +1,13 @@
-from rest_framework import serializers
-from .models import Meme, Comment, User, Page
-from notifications.models import Notification
-from django.utils import timezone
 from django.db.models import Q, F
 from django.contrib.auth import authenticate
+from django.utils import timezone
+
+from .models import Meme, Comment, User, Page
+from notifications.models import Notification
+
+from rest_framework import serializers
+
+import os
 
 
 class MemeSerializer(serializers.ModelSerializer):
@@ -26,6 +30,16 @@ class MemeSerializer(serializers.ModelSerializer):
             return obj.user.small_image.url
         except ValueError:
             return ""
+
+    def to_representation(self, obj):
+        representation = super().to_representation(obj)
+
+        # Get fallback URL if browser doesn't accept image/webp
+        if ("image/webp" not in self.context["request"].headers.get("Accept", "") and
+                os.path.splitext(obj.get_file_url().lower())[1] == ".webp"):
+            representation["fallback"] = obj.original.url
+
+        return representation
 
 
 class FullMemeSerializer(MemeSerializer):
