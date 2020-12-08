@@ -12,23 +12,20 @@ import os
 
 class MemeSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
-    dp_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Meme
-        fields = ("username", "uuid", "caption", "url", "points", "num_comments", "dp_url")
+        fields = ("username", "uuid", "caption", "url", "points", "num_comments")
 
     def get_url(self, obj):
         return obj.get_file_url()
 
-    def get_dp_url(self, obj):
-        try:
-            return obj.user.small_image.url
-        except ValueError:
-            return ""
-
     def to_representation(self, obj):
         representation = super().to_representation(obj)
+
+        """
+        Potential extra fields: is_gif, pname, pdname, dp_url, fallback
+        """
 
         # Check if meme is GIF
         if obj.get_original_ext() == ".gif":
@@ -38,6 +35,12 @@ class MemeSerializer(serializers.ModelSerializer):
         if not self.context["request"].query_params.get("p", "").startswith("page/") and obj.page_name:
             representation["pname"] = obj.page_name
             representation["pdname"] = obj.page_display_name or ""
+
+        # Get image of user who posted meme
+        try:
+            representation["dp_url"] = obj.user.small_image.url
+        except ValueError:
+            pass
 
         # Get fallback URL if browser doesn't accept image/webp
         if ("image/webp" not in self.context["request"].headers.get("Accept", "") and
@@ -50,11 +53,10 @@ class MemeSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     username = serializers.SerializerMethodField()
     content = serializers.SerializerMethodField()
-    dp_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ("uuid", "username", "post_date", "edited", "content", "points", "dp_url", "num_replies")
+        fields = ("uuid", "username", "post_date", "edited", "content", "points", "num_replies")
 
     def get_username(self, obj):
         return "" if obj.deleted else obj.username
@@ -62,18 +64,19 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_content(self, obj):
         return "" if obj.deleted else obj.content
 
-    def get_dp_url(self, obj):
-        try:
-            return "" if obj.deleted else obj.user.small_image.url
-        except ValueError:
-            return ""
-
     def to_representation(self, obj):
         representation = super().to_representation(obj)
 
         if not obj.deleted:
+            # Get image associated with comment
             try:
                 representation["image"] = obj.image.url
+            except ValueError:
+                pass
+
+            # Get profile image of user who posted comment
+            try:
+                representation["dp_url"] = obj.user.small_image.url
             except ValueError:
                 pass
 
@@ -83,12 +86,10 @@ class CommentSerializer(serializers.ModelSerializer):
 class ReplySerializer(serializers.ModelSerializer):
     username = serializers.SerializerMethodField()
     content = serializers.SerializerMethodField()
-    image = serializers.SerializerMethodField()
-    dp_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ("uuid", "username", "post_date", "edited", "content", "image", "points", "dp_url")
+        fields = ("uuid", "username", "post_date", "edited", "content", "points")
 
     def get_username(self, obj):
         return "" if obj.deleted else obj.username
@@ -96,17 +97,23 @@ class ReplySerializer(serializers.ModelSerializer):
     def get_content(self, obj):
         return "" if obj.deleted else obj.content
 
-    def get_image(self, obj):
-        try:
-            return obj.image.url
-        except ValueError:
-            return ""
+    def to_representation(self, obj):
+        representation = super().to_representation(obj)
 
-    def get_dp_url(self, obj):
-        try:
-            return obj.user.small_image.url
-        except ValueError:
-            return ""
+        if not obj.deleted:
+            # Get image associated with reply
+            try:
+                representation["image"] = obj.image.url
+            except ValueError:
+                pass
+
+            # Get profile image of user who posted reply
+            try:
+                representation["dp_url"] = obj.user.small_image.url
+            except ValueError:
+                pass
+
+        return representation
 
 
 class SearchUserSerializer(serializers.ModelSerializer):

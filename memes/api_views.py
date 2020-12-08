@@ -50,16 +50,17 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = MemePagination
 
     def get_queryset(self):
-        memes = Meme.objects.defer(
-            "thumbnail",
-            "upload_date",
-            "nsfw",
-            "num_reports",
-            "num_views",
-            "ip_address",
-            "hidden",
-            "page_id",
-            "page_private"
+        memes = Meme.objects.select_related("user").only(
+            "username",
+            "user__small_image",
+            "page_name",
+            "page_display_name",
+            "original",
+            "large",
+            "uuid",
+            "caption",
+            "points",
+            "num_comments"
         )
 
         if (not self.request.user.is_authenticated or
@@ -98,7 +99,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             if not pname or not re.search("^[a-zA-Z0-9_]+$", pname):
                 raise NotFound
 
-            return memes.filter(page_name=pname).defer("page_name", "page_display_name")
+            return memes.filter(page_name=pname)
 
         elif pathname.startswith("browse/"):
             category_name = pathname.partition("browse/")[2]
@@ -169,7 +170,17 @@ class CommentViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        comments = Comment.objects.filter(root__isnull=True, meme_uuid=self.request.query_params["u"])
+        comments = Comment.objects.select_related("user").only(
+            "uuid",
+            "username",
+            "user__small_image",
+            "post_date",
+            "edited",
+            "content",
+            "image",
+            "points",
+            "num_replies"
+        ).filter(root__isnull=True, meme_uuid=self.request.query_params["u"])
 
         return comments.filter(post_date__lte=parse_datetime(self.request.query_params["before"])) \
                if "before" in self.request.query_params else comments
@@ -195,7 +206,16 @@ class ReplyViewSet(viewsets.ReadOnlyModelViewSet):
 
         comment_id = Comment.objects.values_list("id", flat=True).get(uuid=self.request.query_params["u"])
 
-        return Comment.objects.filter(root_id=comment_id).order_by("id")
+        return Comment.objects.select_related("user").only(
+            "uuid",
+            "username",
+            "user__small_image",
+            "post_date",
+            "edited",
+            "content",
+            "image",
+            "points"
+        ).filter(root_id=comment_id).order_by("id")
 
 
 class SearchListPagination(pagination.PageNumberPagination):
