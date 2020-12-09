@@ -21,7 +21,7 @@ def user_session(request):
 
     return Response({
         "username": user.username,
-        "image": user.image.url if user.image else None,
+        "image": user.small_image.url if user.small_image else None,
         "bio": profile["bio"],
         "stats": {
             "clout": profile["clout"],
