@@ -35,10 +35,41 @@ def get_next_meme_link(self_, uuid):
     return self_.get_next_link()
 
 
+def join_votes_with_data(request: object, data: list, object_name: str) -> list:
+    """
+    Get likes/dislikes for memes or comments in data then add to data
+    """
+    if request.user.is_authenticated:
+        # Check if getting votes for meme or comment
+        if object_name == "meme":
+            ObjectLike = MemeLike
+            uid_field = "meme_uuid"
+        elif object_name == "comment":
+            ObjectLike = CommentLike
+            uid_field = "comment_uuid"
+        else:
+            return data
+
+        # Get meme or comment uids from data
+        uids = [obj["uuid"] for obj in data]
+        # Get votes for those memes/comments for that user
+        votes = ObjectLike.objects.filter(user=request.user, **{f"{uid_field}__in": uids}).values(uid_field, "point")
+        # Add "vote" key and point (1 or -1) value to meme/comment in data
+        for vote in votes:
+            for obj in data:
+                if vote[uid_field] == obj["uuid"]:
+                    obj["vote"] = vote["point"]
+                    break
+
+    return data
+
+
 class MemePagination(pagination.PageNumberPagination):
     page_size = 20
 
     def get_paginated_response(self, data):
+        data = join_votes_with_data(self.request, data, "meme")
+
         return Response({
             "next": get_next_meme_link(self, data[0]["uuid"]) if data else None,
             "results": data
@@ -153,6 +184,8 @@ class CommentPagination(pagination.PageNumberPagination):
     page_size = 20
 
     def get_paginated_response(self, data):
+        data = join_votes_with_data(self.request, data, "comment")
+
         return Response({
             "next": get_next_comment_link(self, data[0]["post_date"]) if data else None,
             "results": data
@@ -190,6 +223,8 @@ class ReplyPagination(CommentPagination):
     page_size = 10
 
     def get_paginated_response(self, data):
+        data = join_votes_with_data(self.request, data, "comment")
+
         return Response({
             "next": self.get_next_link(),
             "results": data

@@ -100,21 +100,6 @@ def random(request):
     return JsonResponse(response)
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_likes(request, obj):
-    uuids = request.query_params.getlist("u")[:20]
-    if not uuids:
-        return JsonResponse([], safe=False)
-
-    if obj == "m":
-        return Response(MemeLike.objects.filter(user=request.user, meme_uuid__in=uuids).annotate(uuid=F("meme_uuid")).values("uuid", "point"))
-    elif obj == "c":
-        return Response(CommentLike.objects.filter(user=request.user, comment_uuid__in=uuids).annotate(uuid=F("comment_uuid")).values("uuid", "point"))
-
-    raise Http404
-
-
 @api_view(("PUT", "DELETE"))
 @permission_classes([IsAuthenticated])
 def like(request):

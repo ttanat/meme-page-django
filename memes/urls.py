@@ -15,7 +15,6 @@ urlpatterns = [
     path("api/full_res/<str:obj>/<str:uuid>", views.full_res, name="full_res"),
     path("api/random", views.random, name="random"),
 
-    path("api/likes/<str:obj>/", views.get_likes, name="get_likes"),
     path("api/like", views.like, name="like"),
     path("api/comment/<str:action>", views.comment, name="comment"),
     path("api/reply", views.reply, name="reply"),
