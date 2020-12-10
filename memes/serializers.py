@@ -21,7 +21,7 @@ class MemeSerializer(serializers.ModelSerializer):
         return obj.get_file_url()
 
     def to_representation(self, obj):
-        representation = super().to_representation(obj)
+        ret = super().to_representation(obj)
 
         """
         Potential extra fields: is_gif, pname, pdname, dp_url, fallback
@@ -29,25 +29,25 @@ class MemeSerializer(serializers.ModelSerializer):
 
         # Check if meme is GIF
         if obj.get_original_ext() == ".gif":
-            representation["is_gif"] = True
+            ret["is_gif"] = True
 
         # Get page name and display name if meme is posted to a page and request is not sent from a page
         if not self.context["request"].query_params.get("p", "").startswith("page/") and obj.page_name:
-            representation["pname"] = obj.page_name
-            representation["pdname"] = obj.page_display_name or ""
+            ret["pname"] = obj.page_name
+            ret["pdname"] = obj.page_display_name or ""
 
         # Get image of user who posted meme
         try:
-            representation["dp_url"] = obj.user_image.url
+            ret["dp_url"] = obj.user_image.url
         except ValueError:
             pass
 
         # Get fallback URL if browser doesn't accept image/webp
         if ("image/webp" not in self.context["request"].headers.get("Accept", "") and
                 os.path.splitext(obj.get_file_url().lower())[1] == ".webp"):
-            representation["fallback"] = obj.original.url
+            ret["fallback"] = obj.original.url
 
-        return representation
+        return ret
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -65,22 +65,22 @@ class CommentSerializer(serializers.ModelSerializer):
         return "" if obj.deleted else obj.content
 
     def to_representation(self, obj):
-        representation = super().to_representation(obj)
+        ret = super().to_representation(obj)
 
         if not obj.deleted:
             # Get image associated with comment
             try:
-                representation["image"] = obj.image.url
+                ret["image"] = obj.image.url
             except ValueError:
                 pass
 
             # Get profile image of user who posted comment
             try:
-                representation["dp_url"] = obj.user_image.url
+                ret["dp_url"] = obj.user_image.url
             except ValueError:
                 pass
 
-        return representation
+        return ret
 
 
 class ReplySerializer(serializers.ModelSerializer):
@@ -98,22 +98,22 @@ class ReplySerializer(serializers.ModelSerializer):
         return "" if obj.deleted else obj.content
 
     def to_representation(self, obj):
-        representation = super().to_representation(obj)
+        ret = super().to_representation(obj)
 
         if not obj.deleted:
             # Get image associated with reply
             try:
-                representation["image"] = obj.image.url
+                ret["image"] = obj.image.url
             except ValueError:
                 pass
 
             # Get profile image of user who posted reply
             try:
-                representation["dp_url"] = obj.user_image.url
+                ret["dp_url"] = obj.user_image.url
             except ValueError:
                 pass
 
-        return representation
+        return ret
 
 
 class SearchUserSerializer(serializers.ModelSerializer):
