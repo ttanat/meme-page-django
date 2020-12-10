@@ -51,7 +51,7 @@ def meme_view(request, uuid):
 
     meme_viewed_signal.send(sender=meme.__class__, user=request.user, meme=meme)
 
-    return Response({
+    response = {
         "username": meme.username,
         "pname": meme.page_name,
         "pdname": meme.page_display_name,
@@ -63,7 +63,16 @@ def meme_view(request, uuid):
         "num_comments": meme.num_comments,
         "dp_url": meme.user_image.url if meme.user_image else None,
         "tags": meme.tags.values_list("name", flat=True)
-    })
+    }
+
+    if request.user.is_authenticated:
+        try:
+            # Add user vote (like/dislike) if exists
+            response["vote"] = MemeLike.objects.values_list("point", flat=True).get(user=request.user, meme_uuid=meme.uuid)
+        except MemeLike.DoesNotExist:
+            pass
+
+    return Response(response)
 
 
 @api_view(["GET"])
