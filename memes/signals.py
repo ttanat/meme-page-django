@@ -52,11 +52,11 @@ def vote_meme(sender, instance, created, **kwargs):
         meme = Meme.objects.select_related("user") \
                            .only("num_likes", "points", "uuid", "thumbnail", "user__id") \
                            .get(id=instance.meme_id)
-        uid = meme.user.id
+        user_id = meme.user.id
     else:
         # Select both num_likes and num_dislikes even if scenario is 'dislike created' (good enough)
         meme = Meme.objects.only("num_likes", "num_dislikes", "points", "user").get(id=instance.meme_id)
-        uid = meme.user_id
+        user_id = meme.user_id
 
     # Calculate point change
     change = instance.point if created else instance.point * 2
@@ -83,10 +83,10 @@ def vote_meme(sender, instance, created, **kwargs):
     meme.save(update_fields=(field, "points") if created else ("num_likes", "num_dislikes", "points"))
 
     # Update clout on user who posted that
-    Profile.objects.filter(user_id=uid).update(clout=F("clout") + change)
+    Profile.objects.filter(user_id=user_id).update(clout=F("clout") + change)
 
     # Notify if vote is a like and user is not liking their own meme
-    if like_created and uid != instance.user_id:
+    if like_created and user_id != instance.user_id:
         meme_voted_signal.send(sender=sender, instance=instance, meme=meme, points=new_points)
 
 
@@ -100,19 +100,19 @@ def vote_comment(sender, instance, created, **kwargs):
         comment = Comment.objects.select_related("user") \
                                  .only("points", "user__id", "meme_uuid") \
                                  .get(id=instance.comment_id)
-        uid = comment.user.id
+        user_id = comment.user.id
     else:
         comment = Comment.objects.only("points", "user").get(id=instance.comment_id)
-        uid = comment.user_id
+        user_id = comment.user_id
 
     # Update points on comment and update clout on user who posted that
     new_points = comment.points + change    # Do this so no need to call .refresh_from_db()
     comment.points = F("points") + change
     comment.save(update_fields=["points"])
-    Profile.objects.filter(user_id=uid).update(clout=F("clout") + change)
+    Profile.objects.filter(user_id=user_id).update(clout=F("clout") + change)
 
     # Notify if vote is a like and user is not liking their own comment
-    if like_created and uid != instance.user_id:
+    if like_created and user_id != instance.user_id:
         comment_voted_signal.send(sender=sender, instance=instance, comment=comment, points=new_points)
 
 
