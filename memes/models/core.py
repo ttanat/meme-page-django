@@ -327,9 +327,6 @@ class Comment(models.Model):
 
     deleted = models.PositiveSmallIntegerField(default=0, choices=Deleted.choices)
 
-    class Meta:
-        constraints = [CheckConstraint(check=~Q(content="", image=None, deleted=0), name="content_image_both_not_empty")]
-
     def __str__(self):
         return f"{self.user.username}: {self.content}"
 
