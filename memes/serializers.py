@@ -38,7 +38,7 @@ class MemeSerializer(serializers.ModelSerializer):
 
         # Get image of user who posted meme
         try:
-            representation["dp_url"] = obj.user.small_image.url
+            representation["dp_url"] = obj.user_image.url
         except ValueError:
             pass
 
@@ -76,7 +76,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
             # Get profile image of user who posted comment
             try:
-                representation["dp_url"] = obj.user.small_image.url
+                representation["dp_url"] = obj.user_image.url
             except ValueError:
                 pass
 
@@ -109,7 +109,7 @@ class ReplySerializer(serializers.ModelSerializer):
 
             # Get profile image of user who posted reply
             try:
-                representation["dp_url"] = obj.user.small_image.url
+                representation["dp_url"] = obj.user_image.url
             except ValueError:
                 pass
 

@@ -81,9 +81,9 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = MemePagination
 
     def get_queryset(self):
-        memes = Meme.objects.select_related("user").only(
+        memes = Meme.objects.only(
             "username",
-            "user__small_image",
+            "user_image",
             "page_name",
             "page_display_name",
             "original",
@@ -203,10 +203,10 @@ class CommentViewSet(viewsets.ReadOnlyModelViewSet):
         if "u" not in self.request.query_params:
             raise ParseError
 
-        comments = Comment.objects.select_related("user").only(
+        comments = Comment.objects.only(
             "uuid",
             "username",
-            "user__small_image",
+            "user_image",
             "post_date",
             "edited",
             "content",
@@ -241,10 +241,10 @@ class ReplyViewSet(viewsets.ReadOnlyModelViewSet):
 
         comment_id = Comment.objects.values_list("id", flat=True).get(uuid=self.request.query_params["u"])
 
-        return Comment.objects.select_related("user").only(
+        return Comment.objects.only(
             "uuid",
             "username",
-            "user__small_image",
+            "user_image",
             "post_date",
             "edited",
             "content",

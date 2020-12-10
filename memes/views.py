@@ -22,9 +22,9 @@ def meme_view(request, uuid):
     """ Page for individual meme with comments """
 
     meme = get_object_or_404(
-        Meme.objects.select_related("user").only(
+        Meme.objects.only(
             "username",
-            "user__image",
+            "user_image",
             "page_id",
             "page_name",
             "page_display_name",
@@ -61,7 +61,7 @@ def meme_view(request, uuid):
         "url": meme.get_file_url(),
         "points": meme.points,
         "num_comments": meme.num_comments,
-        "dp_url": meme.user.image.url if meme.user.image else None,
+        "dp_url": meme.user_image.url if meme.user_image else None,
         "tags": meme.tags.values_list("name", flat=True)
     })
 
@@ -188,6 +188,7 @@ def comment(request, action):
         comment = Comment.objects.create(
             user=request.user,
             username=request.user.username,
+            user_image=request.user.small_image.name if request.user.small_image else "",
             meme=meme,
             meme_uuid=uuid,
             content=content,
@@ -256,6 +257,7 @@ def reply(request):
     new_reply = Comment.objects.create(
         user=request.user,
         username=request.user.username,
+        user_image=request.user.small_image.name if request.user.small_image else "",
         meme=root.meme,
         meme_uuid=root.meme_uuid,
         root=root,
@@ -320,6 +322,7 @@ def upload(request):
         meme = Meme.objects.create(
             user=request.user,
             username=request.user.username,
+            user_image=request.user.small_image.name if request.user.small_image else "",
             page=page,
             page_private=page.private if page else False,
             page_name=page.name if page else "",

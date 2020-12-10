@@ -80,8 +80,7 @@ def user_settings(request):
             return HttpResponseBadRequest()
 
         if request.GET["f"] == "image":
-            user.image.delete()
-            user.small_image.delete()
+            user.delete_profile_image()
 
         return HttpResponse(status=204)
 

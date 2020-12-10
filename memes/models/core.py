@@ -66,6 +66,16 @@ class User(AbstractUser):
             Qualifier="$LATEST"
         )
 
+        # Update all memes and comments
+        self.meme_set.update(user_image=self.small_image.name)
+        self.comment_set.update(user_image=self.small_image.name)
+
+    def delete_profile_image(self):
+        self.image.delete()
+        self.small_image.delete()
+        self.meme_set.update(user_image="")
+        self.comment_set.update(user_image="")
+
 
 @receiver(post_delete, sender=User)
 def delete_user_image(sender, instance, **kwargs):
@@ -107,6 +117,7 @@ class MemeManager(models.Manager):
 class Meme(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     username = models.CharField(max_length=32, blank=False)
+    user_image = models.ImageField(null=True, blank=True)
 
     # Page fields
     page = models.ForeignKey("Page", on_delete=models.SET_NULL, null=True, blank=True)
@@ -300,6 +311,7 @@ def user_directory_path_comments(instance, filename):
 class Comment(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     username = models.CharField(max_length=32, blank=False)
+    user_image = models.ImageField(null=True, blank=True)
 
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="comments")
     meme_uuid = models.CharField(max_length=11, blank=False)
