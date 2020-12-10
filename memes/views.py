@@ -53,21 +53,33 @@ def meme_view(request, uuid):
 
     response = {
         "username": meme.username,
-        "pname": meme.page_name,
-        "pdname": meme.page_display_name,
         "uuid": meme.uuid,
         "caption": meme.caption,
-        "is_gif": meme.get_original_ext() == ".gif",
         "url": meme.get_file_url(),
         "points": meme.points,
         "num_comments": meme.num_comments,
-        "dp_url": meme.user_image.url if meme.user_image else None,
         "tags": meme.tags.values_list("name", flat=True)
     }
 
+    # Add image of user who posted meme if exists
+    try:
+        response["dp_url"] = meme.user_image.url
+    except ValueError:
+        pass
+
+    # Add page name and display name if exists
+    if meme.page_name:
+        response["pname"] = meme.page_name
+        if meme.page_display_name:
+            response["pdname"] = meme.page_display_name
+
+    # Indicate if meme is a GIF
+    if meme.get_original_ext() == ".gif":
+        response["is_gif"] = True
+
+    # Add user vote (like/dislike) if exists
     if request.user.is_authenticated:
         try:
-            # Add user vote (like/dislike) if exists
             response["vote"] = MemeLike.objects.values_list("point", flat=True).get(user=request.user, meme_uuid=meme.uuid)
         except MemeLike.DoesNotExist:
             pass
