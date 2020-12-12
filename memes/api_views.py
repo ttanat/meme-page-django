@@ -88,6 +88,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             "page_display_name",
             "original",
             "large",
+            "upload_date",
             "uuid",
             "caption",
             "points",

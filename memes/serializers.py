@@ -8,6 +8,8 @@ from notifications.models import Notification
 from rest_framework import serializers
 
 import os
+from datetime import timedelta
+from urllib.parse import urlparse
 
 
 class MemeSerializer(serializers.ModelSerializer):
@@ -18,6 +20,10 @@ class MemeSerializer(serializers.ModelSerializer):
         fields = ("username", "uuid", "caption", "url", "points", "num_comments")
 
     def get_url(self, obj):
+        # If meme was uploaded less than 1 minute ago, use original URL (in case it hasn't finished resizing)
+        if timezone.now() - timedelta(minutes=1) < obj.upload_date:
+            return obj.original.url
+
         return obj.get_file_url()
 
     def to_representation(self, obj):
@@ -44,7 +50,7 @@ class MemeSerializer(serializers.ModelSerializer):
 
         # Get fallback URL if browser doesn't accept image/webp
         if ("image/webp" not in self.context["request"].headers.get("Accept", "") and
-                os.path.splitext(obj.get_file_url().lower())[1] == ".webp"):
+                os.path.splitext(urlparse(ret["url"]).path)[1] == ".webp"):
             ret["fallback"] = obj.original.url
 
         return ret
