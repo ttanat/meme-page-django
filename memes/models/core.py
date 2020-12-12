@@ -241,9 +241,9 @@ class Meme(models.Model):
         raise InternalError()
 
     def resize_file(self):
-        if check_valid_file_ext(self.original.name, (".jpg", ".png", ".jpeg", ".gif")):
+        if self.get_original_ext() in (".jpg", ".png", ".jpeg", ".gif"):
             self.resize_image()
-        elif check_valid_file_ext(self.original.name, (".mp4", ".mov")):
+        elif self.get_original_ext() in (".mp4", ".mov"):
             self.resize_video()
         else:
             raise InternalError("Invalid file type")
