@@ -201,8 +201,6 @@ class Meme(models.Model):
         self.save(update_fields=("large", "thumbnail"))
 
     def resize_video(self):
-        print("Checking video...")
-
         response = client.invoke(
             FunctionName="check_video_meme",
             InvocationType="RequestResponse",
@@ -213,7 +211,6 @@ class Meme(models.Model):
         )
 
         response = json.loads(response["Payload"].read())
-        print(response)
 
         if response.get("statusCode") == 200:
             # Assign new large and thumbnail names
@@ -244,16 +241,12 @@ class Meme(models.Model):
         raise InternalError()
 
     def resize_file(self):
-        print("Choosing resize function...")
-
         if check_valid_file_ext(self.original.name, (".jpg", ".png", ".jpeg", ".gif")):
             self.resize_image()
         elif check_valid_file_ext(self.original.name, (".mp4", ".mov")):
             self.resize_video()
         else:
             raise InternalError("Invalid file type")
-
-        print("Done everything")
 
 
 @receiver(post_delete, sender=Meme)
