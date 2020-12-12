@@ -359,8 +359,6 @@ def upload(request):
 
         if request.POST.get("is_profile_page"):
             response = {"success": True, "uuid": meme.uuid}
-            if file.content_type.startswith("video/"):
-                response["thumbnail"] = meme.get_thumbnail_url()
 
             return JsonResponse(response, status=201)
         else:
