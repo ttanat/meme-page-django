@@ -127,7 +127,7 @@ class Meme(models.Model):
 
     # Store original file
     original = models.FileField(upload_to=original_meme_path, null=False, blank=False)
-    # Full size (960x960 for images, 718x718 for video) for desktop (WEBP/MP4)
+    # Full size (960x960 for images, 720x720 for video) for desktop (WEBP/MP4)
     large = models.FileField(null=True, blank=True)
     # Thumbnail (400x400) (WEBP)
     thumbnail = models.ImageField(null=True, blank=True)
@@ -170,93 +170,88 @@ class Meme(models.Model):
         try:
             return self.large.url
         except ValueError:
-            # Should only get here if file is an image <= 400x400 pixels
-            return self.get_thumbnail_url()
+            return self.original.url
 
         raise InternalError()
 
     def get_original_ext(self):
         return os.path.splitext(self.original.name)[1].lower()
 
-    def invoke_lambda_function(self, func_name: str):
-        """
-        func_name: name of AWS lambda function
+    def resize_image(self):
+        # Check if original file is a GIF
+        is_gif = self.get_original_ext() == ".gif"
+        prefix = f"users/{self.username}/memes"
+        # Assign new name for large
+        self.large.name = f"{prefix}/large/{set_random_filename('a.mp4' if is_gif else 'a.webp')}"
+        # Assign new name for thumbnail
+        self.thumbnail.name = f"{prefix}/thumbnail/{set_random_filename('a.webp')}"
 
-        Invoke resize function for image
-        Returns list
+        # Invoke async function to resize GIF or image
+        client.invoke(
+            FunctionName="resize_gif_meme" if is_gif else "resize_image_meme",
+            InvocationType="Event",
+            Payload=json.dumps({
+                "get_file_at": self.original.name,
+                "large_key": self.large.name,
+                "thumbnail_key": self.thumbnail.name,
+            })
+        )
 
-        OR
+        # Save fields after invoking function to buy some time
+        self.save(update_fields=("large", "thumbnail"))
 
-        Invoke create thumbnail function for videos or gifs
-        Returns object {"thumbnail_path": <save this string to self.thumbnail.name>}
-        """
-        print("Calling function...")
+    def resize_video(self):
+        print("Creating thumbnail for video meme...")
+
+        # Assign new thumbnail name
+        self.thumbnail.name = f"users/{self.username}/memes/thumbnail/{set_random_filename('a.webp')}"
 
         response = client.invoke(
-            FunctionName=func_name,
+            FunctionName="create_video_thumbnail",
             InvocationType="RequestResponse",
             Payload=json.dumps({
-                "original_key": self.original.name,
-                "path": f"users/{self.username}/memes"
+                "get_file_at": self.original.name,
+                "thumbnail_key": self.thumbnail.name,
             }),
             Qualifier="$LATEST"
         )
 
-        print("Done calling")
         response = json.loads(response["Payload"].read())
         print(f"\n{response}\n")
 
         if response.get("statusCode") == 200:
-            return response.get("body")
-        elif response.get("statusCode") == 418:
-            self.delete()
-            raise ValidationError(response.get("errorMessage"))
+            # Assign new large name
+            self.large.name = f"users/{self.username}/memes/large/{set_random_filename('a.mp4')}"
+
+            # Invoke async function to resize video
+            client.invoke(
+                FunctionName="resize_video_meme",
+                InvocationType="Event",
+                Payload=json.dumps({
+                    "get_file_at": self.original.name,
+                    "large_key": self.large.name,
+                }),
+                Qualifier="$LATEST"
+            )
+
+            # Save fields after invoking function to buy some time
+            self.save(update_fields=("large", "thumbnail"))
+
+            return
 
         self.delete()
+        if response.get("statusCode") == 418:
+            raise ValidationError(response.get("errorMessage"))
 
-        raise InternalError(f"{'Create thumbnail' if func_name == 'create_meme_thumbnail' else 'Resize'} failed")
-
-    def resize_video_or_gif(self):
-        # Create thumbnail and get thumbnail name from payload
-        payload = self.invoke_lambda_function("create_meme_thumbnail")
-        print(f"Payload:\n{payload}")
-
-        self.thumbnail.name = payload["thumbnail_path"]
-        # Assign new name for large file
-        new_large_path = f"users/{self.username}/memes/large/{token_urlsafe(5)}.mp4"
-        self.large.name = new_large_path
-        # Save large and thumbnail names
-        self.save(update_fields=("large", "thumbnail"))
-
-        # Invoke async function to resize video or gif meme
-        client.invoke(
-            FunctionName="resize_video_or_gif_meme",
-            InvocationType="Event",
-            Payload=json.dumps({
-                "original_key": self.original.name,
-                "save_large_to": self.large.name,
-            }),
-            Qualifier="$LATEST"
-        )
-
-    def resize_image(self):
-        payload = self.invoke_lambda_function("resize_image_meme")
-        print(f"Payload:\n{payload}")
-
-        for obj in payload:
-            getattr(self, obj["size"]).name = f"users/{self.username}/memes/{obj['size']}/{obj['filename']}"
-
-        self.save(update_fields=[p["size"] for p in payload])
+        raise InternalError()
 
     def resize_file(self):
         print("Choosing resize function...")
 
-        if check_valid_file_ext(self.original.name, (".jpg", ".png", ".jpeg")):
-            # Resize images
+        if check_valid_file_ext(self.original.name, (".jpg", ".png", ".jpeg", ".gif")):
             self.resize_image()
-        elif check_valid_file_ext(self.original.name, (".mp4", ".mov", ".gif")):
-            # Resize videos or gifs
-            self.resize_video_or_gif()
+        elif check_valid_file_ext(self.original.name, (".mp4", ".mov")):
+            self.resize_video()
         else:
             raise InternalError("Invalid file type")
 

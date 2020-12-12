@@ -5,7 +5,7 @@ from django.db.models import F, Q, Count
 from django.utils import timezone
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User, Profile
-from .utils import check_valid_file_ext
+from .utils import check_valid_file_ext, check_upload_file_valid
 from analytics.signals import meme_viewed_signal, upload_signal
 
 from rest_framework.decorators import api_view, permission_classes
@@ -301,12 +301,10 @@ def upload(request):
     category_name = request.POST.get("category")
 
     if file:
-        # Check file size is valid
-        ext = os.path.splitext(file.name)[1].lower()
-        if ext in (".jpg", ".png", ".jpeg", ".gif") and file.size > 5242880:
-            return JsonResponse({"success": False, "message": "Maximum image file size is 5 MB"}) 
-        if ext in (".mp4", ".mov") and file.size > 15728640:
-            return JsonResponse({"success": False, "message": "Maximum video file size is 15 MB"}) 
+        # Check file is valid
+        res = check_upload_file_valid(file)
+        if not res["success"]:
+            return JsonResponse(res)
 
         # Check upload limits (50 per hour and 200 per day)
         past_upload = Meme.objects.filter(user=request.user).aggregate(
@@ -323,11 +321,6 @@ def upload(request):
                 return JsonResponse({"success": False, "message": "Category not found"})
             # category = get_object_or_404(Category, name=category_name)
             category = Category.objects.get_or_create(name=category_name)[0]    # Change this before deployment
-
-        # Check content type and file extension is valid
-        if (file.content_type not in ("image/jpeg", "image/png", "image/gif", "video/mp4", "video/quicktime")
-                or not check_valid_file_ext(file.name, (".jpg", ".png", ".jpeg", ".mp4", ".mov", ".gif"))):
-            return JsonResponse({"success": False, "message": "Unsupported file type"})
 
         if page_name:
             page = get_object_or_404(Page.objects.only("admin_id", "private", "permissions"), name=page_name)
@@ -373,7 +366,7 @@ def upload(request):
         else:
             return JsonResponse({"success": True}, status=201)
 
-    return JsonResponse({"success": False, "message": "Error: No file uploaded"})
+    return JsonResponse({"success": False, "message": "Unexpected error occurred"})
 
 
 @api_view(["POST"])
