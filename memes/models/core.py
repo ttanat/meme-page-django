@@ -201,27 +201,24 @@ class Meme(models.Model):
         self.save(update_fields=("large", "thumbnail"))
 
     def resize_video(self):
-        print("Creating thumbnail for video meme...")
-
-        # Assign new thumbnail name
-        self.thumbnail.name = f"users/{self.username}/memes/thumbnail/{set_random_filename('a.webp')}"
+        print("Checking video...")
 
         response = client.invoke(
-            FunctionName="create_video_thumbnail",
+            FunctionName="check_video_meme",
             InvocationType="RequestResponse",
             Payload=json.dumps({
                 "get_file_at": self.original.name,
-                "thumbnail_key": self.thumbnail.name,
             }),
             Qualifier="$LATEST"
         )
 
         response = json.loads(response["Payload"].read())
-        print(f"\n{response}\n")
+        print(response)
 
         if response.get("statusCode") == 200:
-            # Assign new large name
+            # Assign new large and thumbnail names
             self.large.name = f"users/{self.username}/memes/large/{set_random_filename('a.mp4')}"
+            self.thumbnail.name = f"users/{self.username}/memes/thumbnail/{set_random_filename('a.webp')}"
 
             # Invoke async function to resize video
             client.invoke(
@@ -230,6 +227,7 @@ class Meme(models.Model):
                 Payload=json.dumps({
                     "get_file_at": self.original.name,
                     "large_key": self.large.name,
+                    "thumbnail_key": self.thumbnail.name,
                 }),
                 Qualifier="$LATEST"
             )
