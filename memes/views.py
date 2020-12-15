@@ -12,9 +12,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+import os
+import re
 from datetime import timedelta
 from random import randint
-import re, os
+from urllib.parse import urlparse
 
 
 @api_view(["GET"])
@@ -33,6 +35,7 @@ def meme_view(request, uuid):
             "caption",
             "original",
             "large",
+            "thumbnail",
             "points",
             "num_comments",
             "num_views"
@@ -76,6 +79,10 @@ def meme_view(request, uuid):
     # Indicate if meme is a GIF
     if meme.get_original_ext() == ".gif":
         response["is_gif"] = True
+
+    # Send thumbnail URL too if meme URL is a video (for meta tags)
+    if os.path.splitext(urlparse(response["url"]).path)[1] in (".mp4", ".mov", ".gif"):
+        response["thumbnail"] = meme.get_thumbnail_url()
 
     # Add user vote (like/dislike) if exists
     if request.user.is_authenticated:
