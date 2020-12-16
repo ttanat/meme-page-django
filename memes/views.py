@@ -303,7 +303,7 @@ def upload(request):
     page = category = None
     page_name = request.POST.get("page")
     file = request.FILES.get("file")
-    caption = request.POST.get("caption", "")[:100]
+    caption = request.POST.get("caption", "").strip()[:100].strip()
     nsfw = request.POST.get("nsfw") == "true"
     category_name = request.POST.get("category")
 
