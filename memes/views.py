@@ -80,6 +80,11 @@ def meme_view(request, uuid):
     if meme.get_original_ext() == ".gif":
         response["is_gif"] = True
 
+    # Add fallback for WEBP images
+    if ("image/webp" not in request.headers.get("Accept", "")
+            and os.path.splitext(urlparse(response["url"]).path)[1].lower() == ".webp"):
+        response["fallback"] = meme.original.url
+
     # Send thumbnail URL too if meme URL is a video (for meta tags)
     if os.path.splitext(urlparse(response["url"]).path)[1] in (".mp4", ".mov", ".gif"):
         response["thumbnail"] = meme.get_thumbnail_url()
