@@ -50,7 +50,7 @@ class MemeSerializer(serializers.ModelSerializer):
 
         # Get fallback URL if browser doesn't accept image/webp
         if ("image/webp" not in self.context["request"].headers.get("Accept", "") and
-                os.path.splitext(urlparse(ret["url"]).path)[1] == ".webp"):
+                os.path.splitext(urlparse(ret["url"]).path)[1].lower() == ".webp"):
             ret["fallback"] = obj.original.url
 
         return ret
