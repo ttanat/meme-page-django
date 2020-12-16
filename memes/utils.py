@@ -60,6 +60,10 @@ def check_upload_file_valid(file: object) -> dict:
             return {"success": False, "message": "Maximum image file size is 5 MB"}
 
         with Image.open(file) as img:
+            # Check aspect ratio for both image and GIF (Give some extra room past 16:9 aspect ratio, e.g. for 720x404)
+            if img.width / img.height > 1.8:
+                return {"success": False, "message": "Aspect ratio must be between 16:9 and 9:16"}
+
             if ext == ".gif":
                 # Check GIF dimensions are at least 250x250
                 if img.width < 250 or img.height < 250:
