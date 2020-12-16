@@ -1,7 +1,7 @@
 from django.conf import settings
 
 import os, boto3, json
-from PIL import Image
+from PIL import Image, ImageSequence
 
 
 def check_valid_file_ext(filename: str, valid_extensions: tuple) -> bool:
@@ -31,24 +31,15 @@ def resize_any_image(file_key: str, dimensions: tuple):
 
 def check_gif_info(img: object) -> int:
     """ Check GIF duration in milliseconds and number of frames """
-    img.seek(0)
     total_duration = 0
-
-    # Use for loop instead of while True to ensure not stuck in infinite loop
-    for i in range(img.n_frames):
-        try:
-            # Add frame duration to total duration
-            total_duration += img.info.get("duration", 0)
-            # Move onto next frame
-            img.seek(img.tell() + 1)
-        except EOFError:
-            break
+    for frame in ImageSequence.Iterator(img):
+        total_duration += frame.info["duration"]
 
     # Check duration is <= 30 seconds (30000 ms)
     if total_duration > 30000:
         return {"success": False, "message": "GIF must be 30 seconds or less"}
-    # If duration info present, check framerate <= 60
-    if total_duration and img.n_frames / (total_duration / 1000) > 60:
+    # Check framerate is <= 60
+    if img.n_frames / (total_duration / 1000) > 60:
         return {"success": False, "message": "Maximum 60 frames per second"}
 
     return {"success": True}
