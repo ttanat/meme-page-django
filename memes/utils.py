@@ -35,11 +35,10 @@ def check_gif_info(img: object) -> int:
     total_duration = 0
 
     # Use for loop instead of while True to ensure not stuck in infinite loop
-    # 5000 is a random large number that number of frames in GIF should not exceed
-    for i in range(1, 5001):
+    for i in range(img.n_frames):
         try:
             # Add frame duration to total duration
-            total_duration += img.info["duration"]
+            total_duration += img.info.get("duration", 0)
             # Move onto next frame
             img.seek(img.tell() + 1)
         except EOFError:
@@ -48,8 +47,8 @@ def check_gif_info(img: object) -> int:
     # Check duration is <= 30 seconds (30000 ms)
     if total_duration > 30000:
         return {"success": False, "message": "GIF must be 30 seconds or less"}
-    # Check number of frames <= 1800 (60 frames x 30s) and fps <= 60
-    if i > 1800 or i / (total_duration / 1000) > 60:
+    # If duration info present, check framerate <= 60
+    if total_duration and img.n_frames / (total_duration / 1000) > 60:
         return {"success": False, "message": "Maximum 60 frames per second"}
 
     return {"success": True}
