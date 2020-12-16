@@ -307,8 +307,6 @@ def upload(request):
     nsfw = request.POST.get("nsfw") == "true"
     category_name = request.POST.get("category")
 
-    if not caption:
-        return JsonResponse({"success": False, "message": "Please write a caption"})
     if len(re.findall("\n", caption)) > 4:
         return JsonResponse({"success": False, "message": "Maximum new lines reached"})
 
