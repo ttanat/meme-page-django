@@ -32,31 +32,25 @@ def resize_any_image(file_key: str, dimensions: tuple):
 def check_gif_info(img: object) -> int:
     """ Check GIF duration in milliseconds and number of frames """
     img.seek(0)
-    # Count total duration
     total_duration = 0
-    # Ensure all frames and their durations are counted
-    all_frames_counted = False
 
     # Use for loop instead of while True to ensure not stuck in infinite loop
-    # 1800 frames because 30 seconds x 60 fps = 1800 frames
-    # On 1800th loop, i == 1799:
-    #   If 1800 frames in GIF, after 1800th frame info is read, img.seek() causes EOFError, all_frames_counted = True
-    #   If 1801st frame or more exists, img.seek() will NOT cause EOFError, all_frames_counted = False
-    for i in range(1800):
+    # 5000 is a random large number that number of frames in GIF should not exceed
+    for i in range(1, 5001):
         try:
-            frame_duration = img.info["duration"]
-            total_duration += frame_duration
+            # Add frame duration to total duration
+            total_duration += img.info["duration"]
+            # Move onto next frame
             img.seek(img.tell() + 1)
         except EOFError:
-            all_frames_counted = True
             break
 
     # Check duration is <= 30 seconds (30000 ms)
     if total_duration > 30000:
         return {"success": False, "message": "GIF must be 30 seconds or less"}
-    # Check number of frames <= 1800
-    if not all_frames_counted:
-        return {"success": False, "message": "GIF contains too many frames"}
+    # Check number of frames <= 1800 (60 frames x 30s) and fps <= 60
+    if i > 1800 or i / (total_duration / 1000) > 60:
+        return {"success": False, "message": "Maximum 60 frames per second"}
 
     return {"success": True}
 
