@@ -29,20 +29,36 @@ def resize_any_image(file_key: str, dimensions: tuple):
     )
 
 
-def get_gif_duration(img: object) -> int:
-    """ Return GIF duration in milliseconds """
+def check_gif_info(img: object) -> int:
+    """ Check GIF duration in milliseconds and number of frames """
     img.seek(0)
+    # Count total duration
     total_duration = 0
+    # Ensure all frames and their durations are counted
+    all_frames_counted = False
 
-    while True:
+    # Use for loop instead of while True to ensure not stuck in infinite loop
+    # 1800 frames because 30 seconds x 60 fps = 1800 frames
+    # On 1800th loop, i == 1799:
+    #   If 1800 frames in GIF, after 1800th frame info is read, img.seek() causes EOFError, all_frames_counted = True
+    #   If 1801st frame or more exists, img.seek() will NOT cause EOFError, all_frames_counted = False
+    for i in range(1800):
         try:
             frame_duration = img.info["duration"]
             total_duration += frame_duration
             img.seek(img.tell() + 1)
         except EOFError:
+            all_frames_counted = True
             break
 
-    return total_duration
+    # Check duration is <= 30 seconds (30000 ms)
+    if total_duration > 30000:
+        return {"success": False, "message": "GIF must be 30 seconds or less"}
+    # Check number of frames <= 1800
+    if not all_frames_counted:
+        return {"success": False, "message": "GIF contains too many frames"}
+
+    return {"success": True}
 
 
 def check_upload_file_valid(file: object) -> dict:
@@ -64,9 +80,8 @@ def check_upload_file_valid(file: object) -> dict:
                 # Check GIF dimensions are at least 250x250
                 if img.width < 250 or img.height < 250:
                     return {"success": False, "message": "GIF must be at least 250x250 pixels"}
-                # Check GIF duration is <= 30 seconds (30000 ms)
-                if get_gif_duration(img) > 30000:
-                    return {"success": False, "message": "GIF must be 30 seconds or less"}
+                # Get GIF duration and number of frames
+                return check_gif_info(img) # Final check for GIF so returning here
             else:
                 # Check image dimensions are at least 320x320 pixels
                 if img.width < 320 or img.height < 320:
