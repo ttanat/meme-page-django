@@ -360,12 +360,20 @@ def upload(request):
 
         tag_names = re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", request.POST.get("tags"))[:20]
         if tag_names:
-            # Remove duplicates
-            tag_names = list(dict.fromkeys(tag_names))
-            Tag.objects.bulk_create([Tag(name=t) for t in tag_names], ignore_conflicts=True)
-            meme.tags.add(*Tag.objects.filter(name__in=tag_names))
+            # Remove duplicates (case-insensitive)
+            final_tag_names = []
+            marker = set()
+            for t in tag_names:
+                tl = t.lower()
+                if tl not in marker:
+                    marker.add(tl)
+                    final_tag_names.append(t)
+            # Create tags
+            Tag.objects.bulk_create([Tag(name=t) for t in final_tag_names], ignore_conflicts=True)
+            # Add tags to meme
+            meme.tags.add(*Tag.objects.filter(name__in=final_tag_names))
 
-            upload_signal.send(sender=meme.__class__, instance=meme, tags=tag_names)
+            upload_signal.send(sender=meme.__class__, instance=meme, tags=final_tag_names)
 
         if request.POST.get("is_profile_page"):
             response = {"success": True, "uuid": meme.uuid}
