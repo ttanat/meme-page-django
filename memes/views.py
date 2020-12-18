@@ -248,12 +248,13 @@ def comment(request, action):
 
         c = get_object_or_404(Comment.objects.only("image"), user=request.user, uuid=request.GET["u"], deleted=0)
 
+        c.deleted = 1
         # Delete image if exists
         if c.image:
             c.image.delete(False)
-        # Set deleted to true
-        c.deleted = 1
-        c.save(update_fields=("image", "deleted"))
+            c.save(update_fields=("image", "deleted"))
+        else:
+            c.save(update_fields=["deleted"])
 
         return HttpResponse(status=204)
 
