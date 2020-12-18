@@ -103,8 +103,8 @@ def meme_view(request, uuid):
 def full_res(request, obj, uuid):
     if obj == "m":
         meme = get_object_or_404(Meme.objects.only("original", "large"), uuid=uuid)
-        # Get original file if large is webp
-        if os.path.splitext(meme.large.name)[1].lower() == ".webp":
+        # Get original file if large is webp or original is GIF
+        if check_valid_file_ext(meme.large.name, (".webp",)) or check_valid_file_ext(meme.original.name, (".gif",)):
             url = meme.original.url
         else:
             url = meme.get_file_url()
@@ -113,13 +113,13 @@ def full_res(request, obj, uuid):
 
     elif obj == "c":
         comment = get_object_or_404(Comment.objects.only("image", "meme_uuid"), uuid=uuid)
-        if not comment.image:
+        try:
+            return JsonResponse({
+                "url": comment.image.url,
+                "meme_uuid": comment.meme_uuid
+            })
+        except ValueError:
             return HttpResponseBadRequest()
-
-        return JsonResponse({
-            "url": comment.image.url,
-            "meme_uuid": comment.meme_uuid
-        })
 
     raise Http404
 
