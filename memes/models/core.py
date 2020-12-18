@@ -105,7 +105,7 @@ class Profile(models.Model):
 
 
 def original_meme_path(instance, filename):
-    return f"users/{instance.user.username}/memes/original/{set_random_filename(filename)}"
+    return f"users/{instance.user.username}/original/{set_random_filename(filename)}"
 
 
 class MemeManager(models.Manager):
@@ -180,7 +180,7 @@ class Meme(models.Model):
     def resize_image(self):
         # Check if original file is a GIF
         is_gif = self.get_original_ext() == ".gif"
-        prefix = f"users/{self.username}/memes"
+        prefix = f"users/{self.username}"
         # Assign new name for large
         self.large.name = f"{prefix}/large/{set_random_filename('a.mp4' if is_gif else 'a.webp')}"
         # Assign new name for thumbnail
@@ -214,8 +214,8 @@ class Meme(models.Model):
 
         if response.get("statusCode") == 200:
             # Assign new large and thumbnail names
-            self.large.name = f"users/{self.username}/memes/large/{set_random_filename('a.mp4')}"
-            self.thumbnail.name = f"users/{self.username}/memes/thumbnail/{set_random_filename('a.webp')}"
+            self.large.name = f"users/{self.username}/large/{set_random_filename('a.mp4')}"
+            self.thumbnail.name = f"users/{self.username}/thumbnail/{set_random_filename('a.webp')}"
 
             # Invoke async function to resize video
             client.invoke(
