@@ -277,7 +277,7 @@ def reply(request):
         return HttpResponseBadRequest()
 
     root = get_object_or_404(
-        Comment.objects.select_related("meme").only("meme__id", "meme_uuid"),
+        Comment.objects.only("meme", "meme_uuid"),
         uuid=root_uuid,
         deleted=False
     )
@@ -292,7 +292,7 @@ def reply(request):
         user=request.user,
         username=request.user.username,
         user_image=request.user.small_image.name if request.user.small_image else "",
-        meme=root.meme,
+        meme_id=root.meme_id,
         meme_uuid=root.meme_uuid,
         root=root,
         reply_to=reply_to,
