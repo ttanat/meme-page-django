@@ -250,10 +250,10 @@ def comment(request, action):
 
         # Delete image if exists
         if c.image:
-            c.image.delete()
+            c.image.delete(False)
         # Set deleted to true
         c.deleted = 1
-        c.save(update_fields=["deleted"])
+        c.save(update_fields=("image", "deleted"))
 
         return HttpResponse(status=204)
 
