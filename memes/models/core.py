@@ -296,7 +296,7 @@ def user_directory_path_comments(instance, filename):
 
 class Comment(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    username = models.CharField(max_length=32, blank=False)
+    username = models.CharField(max_length=32, blank=True)
     user_image = models.ImageField(null=True, blank=True)
 
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, null=False, blank=False, related_name="comments")
@@ -322,6 +322,7 @@ class Comment(models.Model):
         MEME_OP = 2, _("Deleted by meme OP")
         MODERATOR = 3, _("Removed by moderator")
         STAFF = 4, _("Deleted by staff")
+        USER_DELETED = 5, _("User deleted")
 
     deleted = models.PositiveSmallIntegerField(default=0, choices=Deleted.choices)
 

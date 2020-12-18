@@ -418,7 +418,6 @@ def delete(request, model, identifier=None):
                 Page.objects.get(admin=request.user, name=identifier).delete()
 
             elif model == "user":
-                
                 # Remove following
                 request.user.follows.remove(*request.user.follows.all())    # Using .clear() instead of remove will not send signal
 
@@ -428,16 +427,13 @@ def delete(request, model, identifier=None):
                 # Have to do multiple queries like this instead of
                 # request.user.subscriptions.remove(*request.user.subscriptions.all()) because of notify_subscribe signal
 
-                # Delete all of user's memes
-                request.user.meme_set.all().delete()
-
-                # Get all of user's comments
-                comments = request.user.comment_set.all()
-                # Decrement number of comments by 1 on memes before deleting comments
-                # (only by 1 even if user commented on meme multiple times) (good enough)
-                Meme.objects.filter(id__in=comments.values_list("meme_id", flat=True)).update(num_comments=F("num_comments") - 1)
-                # Delete all of user's comments
-                comments.delete()
+                comments = request.user.comment_set.only("image").all()
+                # Delete comment images
+                for c in comments:
+                    if c.image:
+                        c.image.delete(False)
+                # Remove user reference from comments
+                comments.update(user=None, username="", user_image="", image="", deleted=5)
 
                 # Delete user
                 request.user.delete()
