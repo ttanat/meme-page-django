@@ -24,8 +24,8 @@ def page(request, name):
         "page": {
             "name": page.name,
             "dname": page.display_name,
-            "image": request.build_absolute_uri(page.image.url) if page.image else None,
-            "cover": request.build_absolute_uri(page.cover.url) if page.cover else None,
+            "image": page.image.url if page.image else None,
+            "cover": page.cover.url if page.cover else None,
             "description": page.description,
             "private": page.private,
             "permissions": page.permissions,
@@ -192,7 +192,7 @@ class HandleInviteLinkUser(APIView):
             response["dname"] = link.page.display_name
 
         if link.page.image:
-            response["image"] = request.build_absolute_uri(link.page.image.url)
+            response["image"] = link.page.image.url
 
         return JsonResponse(response)
 
