@@ -1,6 +1,7 @@
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.db.models import F
+from django.contrib.contenttypes.models import ContentType
 
 from .models import Report
 from memes.models import Meme, Comment, Page, User
@@ -9,6 +10,57 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_report(request):
+    """ Report meme, comment, page, or user """
+
+    if request.POST.keys() < {"reportObject", "objectUid", "reason"}:
+        return HttpResponseBadRequest()
+    if request.POST["reason"] not in ("spam", "nudity", "shocking", "private", "discrimination", "dangerous", "illegal", "other"):
+        return HttpResponseBadRequest()
+    if request.POST["reason"] == "other" and not request.POST.get("description", "").strip():
+        return HttpResponseBadRequest()
+
+    # Get object that user is reporting
+    obj = request.POST["reportObject"]
+    if obj == "meme":
+        Object = Meme
+        field = "uuid"
+    elif obj in ("comment", "reply"):
+        Object = Comment
+        field = "uuid"
+    elif obj == "page":
+        Object = Page
+        field = "name"
+    elif obj == "user":
+        Object = User
+        field = "username"
+    else:
+        return HttpResponseBadRequest()
+
+    params = {field: request.POST["objectUid"]}
+    if obj in ("comment", "reply"):
+        params["root__isnull"] = obj == "comment"
+    # Find that object
+    to_report = get_object_or_404(Object.objects.only("id"), **params)
+
+    # Create report
+    Report.objects.create(
+        reporter=request.user,
+        content_type=ContentType.objects.get_for_model(to_report),
+        object_id=to_report.id,
+        reason=request.POST["reason"],
+        message=request.POST.get("description", "").strip()[:500]
+    )
+
+    if obj == "meme":
+        to_report.num_reports = F("num_reports") + 1
+        to_report.save(update_fields=["num_reports"])
+
+    return HttpResponse()
 
 
 class MemeReport(APIView):
