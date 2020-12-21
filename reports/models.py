@@ -14,4 +14,5 @@ class Report(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.reporter} reported ({self.content_object}) for {self.reason}"
+        model = f"{self.content_type}".split(" | ")[1]
+        return f"{self.reporter} reported ({model} | {self.content_object}) for {self.reason}"
