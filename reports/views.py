@@ -2,6 +2,7 @@ from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.db.models import F
 from django.contrib.contenttypes.models import ContentType
+from django.conf import settings
 
 from .models import Report
 from memes.models import Meme, Comment, Page, User
@@ -10,6 +11,8 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+import boto3
 
 
 @api_view(["POST"])
@@ -21,70 +24,88 @@ def create_report(request):
         return HttpResponseBadRequest()
     if request.POST["reason"] not in ("spam", "nudity", "shocking", "private", "discrimination", "dangerous", "illegal", "other"):
         return HttpResponseBadRequest()
-    if request.POST["reason"] == "other" and not request.POST.get("description", "").strip():
+    if request.POST["reason"] == "other" and not request.POST.get("info", "").strip():
         return HttpResponseBadRequest()
 
     # Get object that user is reporting
-    obj = request.POST["reportObject"]
-    if obj == "meme":
-        Object = Meme
-        field = "uuid"
-    elif obj in ("comment", "reply"):
-        Object = Comment
-        field = "uuid"
-    elif obj == "page":
-        Object = Page
-        field = "name"
-    elif obj == "user":
-        Object = User
-        field = "username"
+    obj_name = request.POST["reportObject"]
+    if obj_name == "meme":
+        to_report = get_object_or_404(Meme.objects.only("user", "original", "report_labels"), uuid=request.POST["objectUid"])
+    elif obj_name in ("comment", "reply"):
+        to_report = get_object_or_404(Comment.objects.only("user", "image", "report_labels"), uuid=request.POST["objectUid"])
+    elif obj_name == "page":
+        to_report = get_object_or_404(Page.objects.only("admin"), name=request.POST["objectUid"])
+    elif obj_name == "user":
+        to_report = get_object_or_404(User.objects.only("id"), username=request.POST["objectUid"])
     else:
         return HttpResponseBadRequest()
 
-    params = {field: request.POST["objectUid"]}
-    if obj in ("comment", "reply"):
-        params["root__isnull"] = obj == "comment"
-    # Find that object
-    to_report = get_object_or_404(Object.objects.only("id"), **params)
+    # Prevent reporting oneself
+    if obj_name in ("meme", "comment", "reply") and to_report.user_id == request.user.id:
+        return HttpResponseBadRequest()
+    elif obj_name == "page" and to_report.admin_id == request.user.id:
+        return HttpResponseBadRequest()
+    elif obj_name == "user" and to_report.id == request.user.id:
+        return HttpResponseBadRequest()
 
     # Create report
-    Report.objects.create(
+    report = Report.objects.create(
         reporter=request.user,
-        content_type=ContentType.objects.get_for_model(to_report),
-        object_id=to_report.id,
+        content_object=to_report,
         reason=request.POST["reason"],
-        message=request.POST.get("description", "").strip()[:500]
+        info=request.POST.get("info", "").strip()[:500].strip()
     )
 
-    if obj == "meme":
-        to_report.num_reports = F("num_reports") + 1
-        to_report.save(update_fields=["num_reports"])
+    # Automatically hide/delete/ban depending on number of reports
+    report_count = Report.objects.filter(
+        content_type=ContentType.objects.get_for_model(to_report),
+        object_id=to_report.id
+    ).count()
+    # ).distinct("reporter").count() # works only on PostgreSQL
+    if report_count > 100:
+        if obj_name in ("user", "page"):
+            to_report.banned = True
+            to_report.save(update_fields=["banned"])
+    if report_count > 10:
+        if obj_name == "meme":
+            to_report.hidden = True
+            to_report.save(update_fields=["hidden"])
+        elif obj_name in {"comment", "reply"}:
+            to_report.deleted = 4
+            to_report.save(update_fields=["deleted"])
+
+    if obj_name in ("meme", "comment", "reply") and not to_report.report_labels:
+        labels = moderate_image(to_report)
+        to_report.report_labels = labels
+        to_report.save(update_fields=["report_labels"])
 
     return HttpResponse()
 
 
+def moderate_image(obj):
+    labels = None
+    if isinstance(obj, Meme):
+        if obj.get_original_ext() in (".jpg", ".png", ".jpeg"):
+            labels = analyze_image(obj.original.name)
+    elif isinstance(obj, Comment):
+        if obj.image:
+            labels = analyze_image(obj.image.name)
+
+    return labels
+
+
+def analyze_image(name):
+    client = boto3.client('rekognition', region_name=settings.AWS_S3_REGION_NAME)
+
+    response = client.detect_moderation_labels(
+        Image={'S3Object': {'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Name': name}}
+    )
+
+    return response
+
+
 class MemeReport(APIView):
     permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        if "uuid" not in request.POST or "reason" not in request.POST:
-            return HttpResponseBadRequest()
-
-        meme = get_object_or_404(Meme.objects.only("user"), uuid=request.POST["uuid"])
-        if meme.user_id == request.user.id:
-            return HttpResponseBadRequest("Cannot report yourself")
-
-        Report.objects.create(
-            reporter=request.user,
-            content_object=meme,
-            reason=request.POST["reason"],
-            message=request.POST.get("message", "")
-        )
-
-        meme.num_reports = F("num_reports") + 1
-        meme.save(update_fields=["num_reports"])
-
-        return HttpResponse(status=201)
 
     def get(self, request):
         if "uuid" not in request.POST:
