@@ -246,9 +246,20 @@ def comment(request, action):
         if "u" not in request.GET:
             return HttpResponseBadRequest()
 
-        c = get_object_or_404(Comment.objects.only("image"), user=request.user, uuid=request.GET["u"], deleted=0)
+        if "mu" in request.GET:
+            """ If user is deleting comments on their meme """
+            c = get_object_or_404(
+                Comment.objects.only("meme", "image"),
+                meme_uuid=request.GET["mu"], uuid=request.GET["u"], deleted=0
+            )
+            # Check if user is OP of that meme
+            if not Meme.objects.filter(id=c.meme_id, user=request.user).exists():
+                return HttpResponseBadRequest()
+            c.deleted = 3
+        else:
+            c = get_object_or_404(Comment.objects.only("image"), user=request.user, uuid=request.GET["u"], deleted=0)
+            c.deleted = 1
 
-        c.deleted = 1
         # Delete image if exists
         if c.image:
             c.image.delete(False)
