@@ -447,7 +447,7 @@ def delete(request, model, identifier=None):
                 # Have to do multiple queries like this instead of
                 # request.user.subscriptions.remove(*request.user.subscriptions.all()) because of notify_subscribe signal
 
-                comments = request.user.comment_set.only("image").all()
+                comments = request.user.comments.only("image").all()
                 # Delete comment images
                 for c in comments:
                     if c.image:

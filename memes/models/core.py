@@ -9,11 +9,10 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
-from memes.utils import check_valid_file_ext, resize_any_image
+from memes.utils import resize_any_image
 
 from secrets import token_urlsafe
-from io import BytesIO
-import os, ffmpeg, boto3, json
+import os, boto3, json
 
 
 client = boto3.client('lambda', region_name=settings.AWS_S3_REGION_NAME)
@@ -38,6 +37,7 @@ class User(AbstractUser):
     follows = models.ManyToManyField(settings.AUTH_USER_MODEL, symmetrical=False, related_name="followers", through="Following")
     nsfw = models.BooleanField(default=False)
     show_nsfw = models.BooleanField(default=False)
+    banned = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.username}"
@@ -67,14 +67,15 @@ class User(AbstractUser):
         )
 
         # Update all memes and comments
-        self.meme_set.update(user_image=self.small_image.name)
-        self.comment_set.update(user_image=self.small_image.name)
+        self.memes.update(user_image=self.small_image.name)
+        self.comments.update(user_image=self.small_image.name)
 
     def delete_profile_image(self):
-        self.image.delete()
-        self.small_image.delete()
-        self.meme_set.update(user_image="")
-        self.comment_set.update(user_image="")
+        self.image.delete(False)
+        self.small_image.delete(False)
+        self.save(update_fields=("image", "small_image"))
+        self.memes.update(user_image="")
+        self.comments.update(user_image="")
 
 
 @receiver(post_delete, sender=User)
@@ -114,10 +115,15 @@ class MemeManager(models.Manager):
         return super().get_queryset().filter(hidden=False)
 
 
+def empty_json():
+    return {}
+
+
 class Meme(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memes")
     username = models.CharField(max_length=32, blank=False)
     user_image = models.ImageField(null=True, blank=True)
+    private = models.BooleanField(default=False)
 
     # Page fields
     page = models.ForeignKey("Page", on_delete=models.SET_NULL, null=True, blank=True)
@@ -145,10 +151,12 @@ class Meme(models.Model):
     tags = models.ManyToManyField("Tag", related_name="memes")
     # tags_list = ArrayField(models.CharField(max_length=64, blank=False), blank=True)
 
-    num_reports = models.PositiveIntegerField(default=0)
+    report_labels = models.JSONField(default=empty_json)
+    reviewed = models.BooleanField(default=False)
+    hidden = models.BooleanField(default=False)
+
     num_views = models.PositiveIntegerField(default=0)
     ip_address = models.GenericIPAddressField(null=True)
-    hidden = models.BooleanField(default=False)
 
     objects = MemeManager()
 
@@ -256,6 +264,32 @@ def delete_meme_files(sender, instance, **kwargs):
     instance.thumbnail.delete(False)
 
 
+# def random_album_uid():
+#     return token_urlsafe(5)
+
+
+# class Album(models.Model):
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     created = models.DateTimeField(auto_now_add=True)
+#     name = models.CharField(max_length=32, blank=False)
+#     uid = models.CharField(max_length=7, default=random_album_uid, unique=True)
+#     private = models.BooleanField(default=False)
+#     memes = models.ManyToManyField(Meme, through="Collection", related_name="memes")
+#     num_views = models.PositiveIntegerField(default=0)
+
+#     class Meta:
+#         constraints = [
+#             CheckConstraint(check=models.Q(name__regex="^[a-zA-Z0-9_]+$"), name="album_name_chars_valid"),
+#             UniqueConstraint(fields=["user", "name"], name="same_user_unique_album_name")
+#         ]
+
+
+# class Collection(models.Model):
+#     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, related_name="meme")
+#     album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name="album")
+#     date_added = models.DateTimeField(auto_now_add=True)
+
+
 class Tag(models.Model):
     name = models.CharField(max_length=64, unique=True, blank=False)
 
@@ -295,7 +329,7 @@ def user_directory_path_comments(instance, filename):
 
 
 class Comment(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="comments")
     username = models.CharField(max_length=32, blank=True)
     user_image = models.ImageField(null=True, blank=True)
 
@@ -315,6 +349,9 @@ class Comment(models.Model):
     points = models.IntegerField(default=0)
     num_replies = models.PositiveIntegerField(default=0)
     edited = models.BooleanField(default=False)
+
+    report_labels = models.JSONField(default=empty_json)
+    reviewed = models.BooleanField(default=False)
 
     class Deleted(models.IntegerChoices):
         NO = 0, _("Not deleted"),

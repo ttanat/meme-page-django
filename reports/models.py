@@ -10,7 +10,7 @@ class Report(models.Model):
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey("content_type", "object_id")
     reason = models.CharField(max_length=64, blank=False)
-    message = models.CharField(max_length=500, blank=True)
+    info = models.CharField(max_length=500, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

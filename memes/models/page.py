@@ -7,8 +7,6 @@ from memes.utils import resize_any_image
 from .core import Meme, Comment, set_random_filename
 
 from secrets import token_urlsafe
-from PIL import Image
-import boto3, json
 
 
 def page_directory_path(instance, filename):
@@ -20,6 +18,7 @@ class Page(models.Model):
     moderators = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="moderating", through="Moderator")
     subscribers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="subscriptions", through="Subscriber")
     created = models.DateTimeField(auto_now_add=True)
+    banned = models.BooleanField(default=False)
 
     name = models.CharField(max_length=32, blank=False, unique=True)
     display_name = models.CharField(max_length=32, blank=True)
