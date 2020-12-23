@@ -139,7 +139,7 @@ class HandleModeratorInvite(APIView):
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
-def stop_moderating(self, request, name):
+def stop_moderating(request, name):
     """ For moderator to leave and stop being a moderator """
     """ name is page name """
 
