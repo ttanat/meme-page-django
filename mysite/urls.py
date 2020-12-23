@@ -17,8 +17,8 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework import routers
 from memes import api_views
-from memes.api import api_profile
-from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
+from memes.api import api_profile, api_auth
+from rest_framework_simplejwt.views import TokenRefreshView
 
 router = routers.DefaultRouter()
 router.register("memes/pv", api_views.PrivateMemeViewSet, basename="Meme")
@@ -38,7 +38,7 @@ router.register("profile/comments", api_profile.ProfileCommentsViewSet, basename
 urlpatterns = [
     path("", include("memes.urls")),
     path("api/", include(router.urls)),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/', api_auth.login, name='login'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include("analytics.urls")),
     path('api/notifications/', include("notifications.urls")),

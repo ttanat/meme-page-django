@@ -1,7 +1,8 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db import IntegrityError
 from django.db.models import F, Q
 # from django.views.decorators.cache import cache_page
+from django.contrib.auth import authenticate
 
 from memes.models import Page, User, Profile
 
@@ -11,6 +12,23 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 import re
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login(request):
+    user = authenticate(request, username=request.POST["username"], password=request.POST["password"])
+    if user is not None:
+        if user.banned:
+            return HttpResponse(status=403)
+        else:
+            refresh = RefreshToken.for_user(user)
+            return JsonResponse({
+                "refresh": f"{refresh}",
+                "access": f"{refresh.access_token}",
+            })
+
+    return HttpResponse(status=401)
 
 
 @api_view(["GET"])
