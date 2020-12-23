@@ -86,7 +86,8 @@ def get_moderators(request, name):
     if request.user.id == page.admin_id:
         return Response({
             "current": page.moderators.values_list("username", flat=True),
-            "pending": page.moderatorinvite_set.values_list("invitee__username", flat=True)
+            "pending": page.moderatorinvite_set.values_list("invitee__username", flat=True),
+            "admin": True
         })
 
     return Response({"current": page.moderators.values_list("username", flat=True)})
