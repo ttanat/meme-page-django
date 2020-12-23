@@ -5,14 +5,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 
 from .models import Report
+from .utils import get_moderation_labels, analyze_labels
 from memes.models import Meme, Comment, Page, User
 
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
-import boto3
 
 
 @api_view(["POST"])
@@ -70,38 +69,26 @@ def create_report(request):
         if obj_name == "meme":
             to_report.hidden = True
             to_report.save(update_fields=["hidden"])
-        elif obj_name in {"comment", "reply"}:
+        elif obj_name in ("comment", "reply"):
             to_report.deleted = 4
             to_report.save(update_fields=["deleted"])
 
     if obj_name in ("meme", "comment", "reply") and not to_report.report_labels:
-        labels = moderate_image(to_report)
-        to_report.report_labels = labels
-        to_report.save(update_fields=["report_labels"])
+        labels = get_moderation_labels(to_report)
+        if labels is not None:  # Labels will be None if object is comment/reply without image
+            to_report.report_labels = labels
+            analysis = analyze_labels(labels)
+            if analysis["hide"]:
+                if obj_name == "meme":
+                    to_report.hidden = True
+                    to_report.save(update_fields=("report_labels", "hidden"))
+                else:
+                    to_report.deleted = 4
+                    to_report.save(update_fields=("report_labels", "deleted"))
+            else:
+                to_report.save(update_fields=["report_labels"])
 
     return HttpResponse()
-
-
-def moderate_image(obj):
-    labels = None
-    if isinstance(obj, Meme):
-        if obj.get_original_ext() in (".jpg", ".png", ".jpeg"):
-            labels = analyze_image(obj.original.name)
-    elif isinstance(obj, Comment):
-        if obj.image:
-            labels = analyze_image(obj.image.name)
-
-    return labels
-
-
-def analyze_image(name):
-    client = boto3.client('rekognition', region_name=settings.AWS_S3_REGION_NAME)
-
-    response = client.detect_moderation_labels(
-        Image={'S3Object': {'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Name': name}}
-    )
-
-    return response
 
 
 class MemeReport(APIView):
