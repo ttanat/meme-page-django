@@ -2,7 +2,7 @@ from django.http import HttpResponse, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 
 from memes.models import User, Page
-from memes.utils import check_valid_file_ext
+from memes.utils import check_file_ext
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -33,7 +33,7 @@ def user_settings(request):
 
             new_img = request.FILES["image"]
             if (new_img.content_type not in ("image/jpeg", "image/png")
-                    or not check_valid_file_ext(new_img.name, (".jpg", ".png", ".jpeg"))):
+                    or not check_file_ext(new_img.name, (".jpg", ".png", ".jpeg"))):
                 return HttpResponseBadRequest("Supported media types: JPEG, PNG")
 
             user.add_profile_image(new_img)
@@ -117,7 +117,7 @@ class PageSettings(APIView):
                 page = self.get_object(request.user, name, ("name", "image"))
                 img = request.FILES["image"]
                 # Check valid image type
-                if not check_valid_file_ext(img.name, (".jpg", ".png", ".jpeg")):
+                if not check_file_ext(img.name, (".jpg", ".png", ".jpeg")):
                     return HttpResponseBadRequest()
                 # Delete previous image
                 page.image.delete()
@@ -129,7 +129,7 @@ class PageSettings(APIView):
                 page = self.get_object(request.user, name, ("name", "cover"))
                 cover = request.FILES["cover"]
                 # Check valid image type
-                if not check_valid_file_ext(cover.name, (".jpg", ".png", ".jpeg")):
+                if not check_file_ext(cover.name, (".jpg", ".png", ".jpeg")):
                     return HttpResponseBadRequest()
                 # Delete previous image
                 page.cover.delete()

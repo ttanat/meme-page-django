@@ -4,7 +4,7 @@ import os, boto3, json
 from PIL import Image, ImageSequence
 
 
-def check_valid_file_ext(filename: str, valid_extensions: tuple) -> bool:
+def check_file_ext(filename: str, valid_extensions: tuple) -> bool:
     """ Check that file has valid extension """
     return os.path.splitext(filename)[1].lower() in valid_extensions
 

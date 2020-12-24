@@ -5,7 +5,7 @@ from django.db.models import F, Q, Count
 from django.utils import timezone
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User, Profile
-from .utils import check_valid_file_ext, check_upload_file_valid
+from .utils import check_file_ext, check_upload_file_valid
 from analytics.signals import meme_viewed_signal, upload_signal
 
 from rest_framework.decorators import api_view, permission_classes
@@ -104,7 +104,7 @@ def full_res(request, obj, uuid):
     if obj == "m":
         meme = get_object_or_404(Meme.objects.only("original", "large"), uuid=uuid)
         # Get original file if large is webp or original is GIF
-        if check_valid_file_ext(meme.large.name, (".webp",)) or check_valid_file_ext(meme.original.name, (".gif",)):
+        if check_file_ext(meme.large.name, (".webp",)) or check_file_ext(meme.original.name, (".gif",)):
             url = meme.original.url
         else:
             url = meme.get_file_url()
@@ -213,7 +213,7 @@ def comment(request, action):
         if not uuid or (not content and not image):
             return HttpResponseBadRequest()
 
-        if image and not check_valid_file_ext(image.name, (".jpg", ".png", ".jpeg")):
+        if image and not check_file_ext(image.name, (".jpg", ".png", ".jpeg")):
             return HttpResponseBadRequest()
 
         meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
@@ -284,7 +284,7 @@ def reply(request):
     if not root_uuid or not reply_to_uuid or (not content and not image):
         return HttpResponseBadRequest()
 
-    if image and not check_valid_file_ext(image.name, (".jpg", ".png", ".jpeg")):
+    if image and not check_file_ext(image.name, (".jpg", ".png", ".jpeg")):
         return HttpResponseBadRequest()
 
     root = get_object_or_404(
