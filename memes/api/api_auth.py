@@ -35,6 +35,7 @@ def login(request):
 @permission_classes([IsAuthenticated])
 def user_session(request):
     user = request.user
+    assert not user.banned
     profile = Profile.objects.values("bio", "clout", "num_followers", "num_following").get(user=user)
 
     return Response({
