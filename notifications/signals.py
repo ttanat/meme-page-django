@@ -32,8 +32,8 @@ def notify_meme_like(sender, instance, meme, points, **kwargs):
             link=f"/m/{meme.uuid}",
             content_type=memelike_content_type,
             defaults={
-                "action": "liked",  # Probably faster to update to same value than compare when selecting
-                "image": meme.thumbnail.url,  # Probably faster to update to same value than compare when selecting
+                "action": "liked",  # Faster to update to same value than compare when finding in db
+                "image": meme.thumbnail.url,  # Faster to update to same value than compare when finding in db
                 "seen": False,
                 "message": message,
                 "timestamp": timezone.now(),
@@ -61,7 +61,7 @@ def notify_comment_like(sender, instance, comment, points, **kwargs):
             link=f"/m/{comment.meme_uuid}",
             content_type=commentlike_content_type,
             defaults={
-                "action": "liked",  # Probably faster to update to same value than compare when selecting
+                "action": "liked",  # Faster to update to same value than compare when finding in db
                 "seen": False,
                 "message": message,
                 "timestamp": timezone.now(),
