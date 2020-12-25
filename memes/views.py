@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import F, Q, Count
 # from django.views.decorators.cache import cache_page
 from django.utils import timezone
+from django.conf import settings
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User, Profile
 from .utils import check_file_ext, check_upload_file_valid
@@ -17,6 +18,8 @@ import re
 from datetime import timedelta
 from random import randint
 from urllib.parse import urlparse
+
+import boto3
 
 
 @api_view(["GET"])
@@ -438,25 +441,46 @@ def delete(request, model, identifier=None):
                 Page.objects.get(admin=request.user, name=identifier).delete()
 
             elif model == "user":
-                # Remove following
-                request.user.follows.remove(*request.user.follows.all())    # Using .clear() instead of remove will not send signal
+                s3 = boto3.resource("s3")
+                bucket = settings.AWS_STORAGE_BUCKET_NAME
+                username = request.user.username
 
-                # Remove subscriptions
-                for page in request.user.subscriptions.all():
-                    page.subscribers.remove(request.user)
-                # Have to do multiple queries like this instead of
-                # request.user.subscriptions.remove(*request.user.subscriptions.all()) because of notify_subscribe signal
+                memes = request.user.memes.all()
+                # Move media files to path without a username
+                for meme in memes:
+                    # Remove username and user image
+                    meme.username = meme.user_image.name = ""
+                    # Move original to deleted user
+                    original = meme.original.name
+                    new_original = "/[deleted]/".join(meme.original.name.split(f"/{username}/"))
+                    meme.original.name = new_original
+                    s3.meta.client.copy({"Bucket": bucket, "Key": original}, bucket, new_original)
+                    # Move large to deleted user
+                    large = meme.large.name
+                    new_large = "/[deleted]/".join(meme.large.name.split(f"/{username}/"))
+                    meme.large.name = new_large
+                    s3.meta.client.copy({"Bucket": bucket, "Key": large}, bucket, new_large)
+                    # Delete thumbnail
+                    meme.thumbnail.delete(False)
+                # Bulk update all memes
+                Meme.objects.bulk_update(memes, ("username", "user_image", "original", "large", "thumbnail"))
 
-                comments = request.user.comments.only("image").all()
-                # Delete comment images
-                for c in comments:
-                    if c.image:
-                        c.image.delete(False)
-                # Remove user reference from comments
-                comments.update(user=None, username="", user_image="", image="", deleted=5)
+                comments = request.user.comments.all()
+                for comment in comments:
+                    # Remove username and user image
+                    comment.username = comment.user_image.name = ""
+                    if comment.image:
+                        # Move comment image to deleted user
+                        image = comment.image.name
+                        new_image = "/[deleted]/".join(comment.image.name.split(f"/{username}/"))
+                        comment.image.name = new_image
+                        s3.meta.client.copy({"Bucket": bucket, "Key": image}, bucket, new_image)
+                # Bulk update all comments
+                Comment.objects.bulk_update(comments, ("username", "user_image", "image"))
 
-                # Delete user
-                request.user.delete()
+                # Change user to inactive
+                request.user.is_active = False
+                request.user.save(update_fields=["is_active"])
         else:
             return HttpResponseBadRequest("Password incorrect")
 

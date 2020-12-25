@@ -9,7 +9,7 @@ from rest_framework import viewsets, pagination
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import ParseError, NotFound
 
 
 @api_view(["GET"])
@@ -26,6 +26,7 @@ def user_page(request, username):
         User.objects.select_related("profile").only(
             "image",
             "banned",
+            "is_active",
             "profile__bio",
             "profile__clout",
             "profile__num_followers",
@@ -36,6 +37,8 @@ def user_page(request, username):
 
     if user.banned:
         return JsonResponse({"banned": True})
+    if not user.is_active:
+        return JsonResponse({"deleted": True})
 
     return Response({
         "image": user.image.url if user.image else None,
@@ -78,14 +81,18 @@ class UserMemesViewSet(ProfileMemesViewSet):
         if "u" not in self.request.GET:
             raise ParseError
 
+        user = get_object_or_404(User.objects.only("banned", "is_active"), username__iexact=self.request.GET["u"])
+        if user.banned or not user.is_active:
+            raise NotFound
+
         return Meme.objects.only("uuid", "thumbnail", "original") \
-                           .filter(username=self.request.GET["u"], page_private=False) \
+                           .filter(user=user, page_private=False) \
                            .order_by("-id")
 
         """
         Intentionally leave out memes on private pages that both users are subscribed to because query is too complicated
 
-        return Meme.objects.filter(username=self.request.GET["u"]) \
+        return Meme.objects.filter(user=user) \
                            .filter(Q(page_private=False)|Q(page__subscribers=self.request.user.id)).order_by("-id")
         """
 
