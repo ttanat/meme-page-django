@@ -68,9 +68,9 @@ def register(request):
     #     "refresh": f"{refresh_token}",
     #     "access": f"{refresh_token.access_token}"
     # })
-    username = request.POST.get("username")
-    email = request.POST.get("email")
-    password1 = request.POST.get("password1")
+    username = request.POST["username"]
+    email = request.POST["email"]
+    password1 = request.POST["password1"]
 
     if not username or not email or not password1:
         error = "Username" if not username else "Email" if not email else "Password"
@@ -85,10 +85,10 @@ def register(request):
         # return JsonResponse({"message": "Password must be at least 6 characters", "field": "p"})
     if password1 != request.POST.get("password2"):
         return JsonResponse({"message": "Password does not match", "field": "p2"})
+    if User.objects.filter(email=email, is_active=True).exists():
+        return JsonResponse({"message": "Email already in use", "field": "e"})
     if User.objects.filter(username__iexact=username).exists():
         return JsonResponse({"message": "Username already taken", "field": "u", "taken": True})
-    if User.objects.filter(email=email).exists():
-        return JsonResponse({"message": "Email already in use", "field": "e"})
 
     user = None
     try:
