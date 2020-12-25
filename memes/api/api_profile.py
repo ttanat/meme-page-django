@@ -23,10 +23,19 @@ def profile(request):
 def user_page(request, username):
     """ Get info for /user/username page """
     user = get_object_or_404(
-        User.objects.select_related("profile") \
-                    .only("image", "profile__bio", "profile__clout", "profile__num_followers", "profile__num_following"),
+        User.objects.select_related("profile").only(
+            "image",
+            "banned",
+            "profile__bio",
+            "profile__clout",
+            "profile__num_followers",
+            "profile__num_following"
+        ),
         username__iexact=username
     )
+
+    if user.banned:
+        return JsonResponse({"banned": True})
 
     return Response({
         "image": user.image.url if user.image else None,
