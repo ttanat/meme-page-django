@@ -16,25 +16,6 @@ import re
 from urllib.parse import urlencode
 
 
-def add_before_query_param(self_):
-    """ Check if should add "before" query parameter """
-    return self_.get_next_link() and "before" not in self_.request.query_params and "page" not in self_.request.query_params
-
-
-def get_next_meme_link(self_, uuid):
-    """
-    Add "before" query param to prevent duplicates
-    e.g. new memes uploaded before loading next page will cause duplicates
-    """
-    if self_.request.query_params.get("p") and add_before_query_param(self_):
-        # Get upload or post date of first object
-        before = Meme.objects.values_list("upload_date", flat=True).get(uuid=uuid)
-        # Add "before" query param to next link
-        return f"{self_.get_next_link()}&{urlencode({'before': before})}"
-
-    return self_.get_next_link()
-
-
 def join_votes_with_data(data: list, user_id: int, object_name: str) -> list:
     """
     Get likes/dislikes for memes or comments in data then add to data
@@ -67,12 +48,29 @@ def join_votes_with_data(data: list, user_id: int, object_name: str) -> list:
 class MemePagination(pagination.PageNumberPagination):
     page_size = 20
 
+    def add_before_query_param(self):
+        """ Check if should add "before" query parameter """
+        return self.get_next_link() and "before" not in self.request.query_params and "page" not in self.request.query_params
+
+    def get_next_meme_link(self, uuid):
+        """
+        Add "before" query param to prevent duplicates
+        e.g. new memes uploaded before loading next page will cause duplicates
+        """
+        if self.request.query_params.get("p") and self.add_before_query_param():
+            # Get upload or post date of first object
+            before = Meme.objects.values_list("upload_date", flat=True).get(uuid=uuid)
+            # Add "before" query param to next link
+            return f"{self.get_next_link()}&{urlencode({'before': before})}"
+
+        return self.get_next_link()
+
     def get_paginated_response(self, data):
         if self.request.user.is_authenticated:
             data = join_votes_with_data(data, self.request.user.id, "meme")
 
         return Response({
-            "next": get_next_meme_link(self, data[0]["uuid"]) if data else None,
+            "next": self.get_next_meme_link(data[0]["uuid"]) if data else None,
             "results": data
         })
 
@@ -177,20 +175,23 @@ class PrivateMemeViewSet(viewsets.ReadOnlyModelViewSet):
         return Meme.objects.filter(page=page)
 
 
-def get_next_comment_link(self_, datetime):
-    return f"{self_.get_next_link()}&{urlencode({'before': datetime})}" \
-           if add_before_query_param(self_) else self_.get_next_link()
-
-
 class CommentPagination(pagination.PageNumberPagination):
     page_size = 20
+
+    def add_before_query_param(self):
+        """ Check if should add "before" query parameter """
+        return self.get_next_link() and "before" not in self.request.query_params and "page" not in self.request.query_params
+
+    def get_next_comment_link(self, datetime):
+        return f"{self.get_next_link()}&{urlencode({'before': datetime})}" \
+               if self.add_before_query_param() else self.get_next_link()
 
     def get_paginated_response(self, data):
         if self.request.user.is_authenticated:
             data = join_votes_with_data(data, self.request.user.id, "comment")
 
         return Response({
-            "next": get_next_comment_link(self, data[0]["post_date"]) if data else None,
+            "next": self.get_next_comment_link(data[0]["post_date"]) if data else None,
             "results": data
         })
 
