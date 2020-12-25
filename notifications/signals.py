@@ -7,7 +7,15 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 
 
+"""
+This file (and probably other signals.py files too) is evaluated twice
+on first server startup using "python manage.py runserver"
+so get_for_model is called twice for each model
+"""
+
+
 meme_voted_signal = Signal(providing_args=["instance", "meme", "points"])
+memelike_content_type = ContentType.objects.get_for_model(MemeLike)
 
 
 @receiver(meme_voted_signal, sender=MemeLike)
@@ -22,7 +30,7 @@ def notify_meme_like(sender, instance, meme, points, **kwargs):
         Notification.objects.update_or_create(
             recipient=meme.user,
             link=f"/m/{meme.uuid}",
-            content_type=ContentType.objects.get_for_model(MemeLike),
+            content_type=memelike_content_type,
             defaults={
                 "action": "liked",  # Probably faster to update to same value than compare when selecting
                 "image": meme.thumbnail.url,  # Probably faster to update to same value than compare when selecting
@@ -35,6 +43,7 @@ def notify_meme_like(sender, instance, meme, points, **kwargs):
 
 
 comment_voted_signal = Signal(providing_args=["instance", "comment", "points"])
+commentlike_content_type = ContentType.objects.get_for_model(CommentLike)
 
 
 @receiver(comment_voted_signal, sender=CommentLike)
@@ -50,7 +59,7 @@ def notify_comment_like(sender, instance, comment, points, **kwargs):
         Notification.objects.update_or_create(
             recipient=comment.user,
             link=f"/m/{comment.meme_uuid}",
-            content_type=ContentType.objects.get_for_model(sender),
+            content_type=commentlike_content_type,
             defaults={
                 "action": "liked",  # Probably faster to update to same value than compare when selecting
                 "seen": False,
