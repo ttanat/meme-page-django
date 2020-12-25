@@ -125,8 +125,8 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         elif pathname == "all":
             return memes
 
-        elif pathname.startswith("page/"):
-            pname = pathname.partition("page/")[2]
+        elif pathname.startswith("p/"):
+            pname = pathname.partition("p/")[2]
 
             if not pname or not re.search("^[a-zA-Z0-9_]+$", pname):
                 raise NotFound

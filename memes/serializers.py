@@ -38,7 +38,7 @@ class MemeSerializer(serializers.ModelSerializer):
             ret["is_gif"] = True
 
         # Get page name and display name if meme is posted to a page and request is not sent from a page
-        if not self.context["request"].query_params.get("p", "").startswith("page/") and obj.page_name:
+        if not self.context["request"].query_params.get("p", "").startswith("p/") and obj.page_name:
             ret["pname"] = obj.page_name
             ret["pdname"] = obj.page_display_name or ""
 
