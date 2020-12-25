@@ -438,7 +438,10 @@ def delete(request, model, identifier=None):
         password = request.POST.get("password")
         if password and request.user.check_password(password):
             if model == "page":
-                Page.objects.get(admin=request.user, name=identifier).delete()
+                # Select image and cover for deleting file in post_delete signal
+                page = get_object_or_404(Page.objects.only("image", "cover"), admin=request.user, name=identifier)
+                page.meme_set.all().update(page_private=False, page_name="", page_display_name="")
+                page.delete()
 
             elif model == "user":
                 s3 = boto3.resource("s3")
