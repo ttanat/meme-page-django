@@ -121,7 +121,7 @@ def notify_follow(sender, instance, action, pk, **kwargs):
             actor=instance,
             action="followed",
             recipient=followed_user,
-            link=f"/user/{instance.username}",
+            link=f"/u/{instance.username}",
             image=instance.image.url if instance.image else "",
             message=f"{instance.username} followed you",
             content_object=followed_user
@@ -146,7 +146,7 @@ def notify_subscribe(sender, instance, action, pk, **kwargs):
             actor=new_sub,
             action="subscribed",
             recipient=page_admin,
-            link=f"/user/{new_sub.username}",
+            link=f"/u/{new_sub.username}",
             image=new_sub.image.url if new_sub.image else "",
             message=f"{new_sub.username} subscribed to {instance.name}",
             content_object=instance

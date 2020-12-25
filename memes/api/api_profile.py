@@ -21,7 +21,7 @@ def profile(request):
 
 @api_view(["GET"])
 def user_page(request, username):
-    """ Get info for /user/username page """
+    """ Get info for /u/username page """
     user = get_object_or_404(
         User.objects.select_related("profile").only(
             "image",
@@ -70,7 +70,7 @@ class ProfileMemesViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class UserMemesViewSet(ProfileMemesViewSet):
-    """ Get memes on /user/username page """
+    """ Get memes on /u/username page """
     serializer_class = UserMemesSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
