@@ -20,16 +20,16 @@ def notify_meme_like(sender, instance, meme, points, **kwargs):
         message = f"{username} {f'and {points - 1} other{s} ' if points > 1 else ''}liked your meme"
 
         Notification.objects.update_or_create(
-            action="liked",
             recipient=meme.user,
             link=f"/m/{meme.uuid}",
-            image=meme.thumbnail.url,
-            content_type=ContentType.objects.get_for_model(sender),
-            object_id=instance.id,
+            content_type=ContentType.objects.get_for_model(MemeLike),
             defaults={
+                "action": "liked",  # Probably faster to update to same value than compare when selecting
+                "image": meme.thumbnail.url,  # Probably faster to update to same value than compare when selecting
                 "seen": False,
                 "message": message,
-                "timestamp": timezone.now()
+                "timestamp": timezone.now(),
+                "object_id": instance.id,
             }
         )
 
@@ -46,16 +46,17 @@ def notify_comment_like(sender, instance, comment, points, **kwargs):
         username = User.objects.values_list("username", flat=True).get(id=instance.user_id)
         message = f"{username} {f'and {points - 1} other{s} ' if points > 1 else ''}liked your comment"
 
+        # Will combine number of likes for all of user's comments on same meme
         Notification.objects.update_or_create(
-            action="liked",
             recipient=comment.user,
             link=f"/m/{comment.meme_uuid}",
             content_type=ContentType.objects.get_for_model(sender),
-            object_id=instance.id,
             defaults={
+                "action": "liked",  # Probably faster to update to same value than compare when selecting
                 "seen": False,
                 "message": message,
-                "timestamp": timezone.now()
+                "timestamp": timezone.now(),
+                "object_id": instance.id,
             }
         )
 
