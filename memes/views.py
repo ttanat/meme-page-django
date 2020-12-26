@@ -447,6 +447,7 @@ def delete(request, model, identifier=None):
                 s3 = boto3.resource("s3")
                 bucket = settings.AWS_STORAGE_BUCKET_NAME
                 username = request.user.username
+                keys_to_delete = []
 
                 memes = request.user.memes.all()
                 # Move media files to path without a username
@@ -458,11 +459,13 @@ def delete(request, model, identifier=None):
                     new_original = "/[deleted]/".join(meme.original.name.split(f"/{username}/"))
                     meme.original.name = new_original
                     s3.meta.client.copy({"Bucket": bucket, "Key": original}, bucket, new_original)
+                    keys_to_delete.append(original)
                     # Move large to deleted user
                     large = meme.large.name
                     new_large = "/[deleted]/".join(meme.large.name.split(f"/{username}/"))
                     meme.large.name = new_large
                     s3.meta.client.copy({"Bucket": bucket, "Key": large}, bucket, new_large)
+                    keys_to_delete.append(large)
                     # Delete thumbnail
                     meme.thumbnail.delete(False)
                 # Bulk update all memes
@@ -478,8 +481,20 @@ def delete(request, model, identifier=None):
                         new_image = "/[deleted]/".join(comment.image.name.split(f"/{username}/"))
                         comment.image.name = new_image
                         s3.meta.client.copy({"Bucket": bucket, "Key": image}, bucket, new_image)
+                        keys_to_delete.append(image)
                 # Bulk update all comments
                 Comment.objects.bulk_update(comments, ("username", "user_image", "image"))
+
+                # Split keys into chunks of size 1000 (code copied from online)
+                to_delete_chunks = [keys_to_delete[i*1000:(i+1)*1000] for i in range((len(keys_to_delete)+1000-1)//1000)]
+                # Delete keys
+                for chunk in to_delete_chunks:
+                    boto3.client("s3").delete_objects(
+                        Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                        Delete={
+                            "Objects": [{"Key": key} for key in chunk]
+                        }
+                    )
 
                 # Change user to inactive
                 request.user.is_active = False
