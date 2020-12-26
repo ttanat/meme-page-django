@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.conf import settings
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, User, Profile
-from .utils import check_file_ext, check_upload_file_valid
+from .utils import check_file_ext, check_upload_file_valid, get_upload_tags
 from analytics.signals import meme_viewed_signal, upload_signal
 
 from rest_framework.decorators import api_view, permission_classes
@@ -359,15 +359,7 @@ def upload(request):
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
 
         tags = re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", request.POST.get("tags"))[:20]
-        final_tags = []
-        if tags:
-            # Remove duplicates (case-insensitive)
-            marker = set()
-            for t in tags:
-                tl = t.lower()
-                if tl not in marker:
-                    marker.add(tl)
-                    final_tags.append(t)
+        final_tags = get_upload_tags(tags)
 
         meme = Meme.objects.create(
             user=request.user,

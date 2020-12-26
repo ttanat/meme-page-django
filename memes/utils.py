@@ -79,3 +79,16 @@ def check_upload_file_valid(file: object) -> dict:
         return {"success": False, "message": "Maximum video file size is 15 MB"}
 
     return {"success": True}
+
+
+def get_upload_tags(tags: list) -> list:
+    """ Remove duplicate tags (case-insensitive) """
+    result = []
+    marker = set()
+    for t in tags:
+        tl = t.lower()
+        if tl not in marker:
+            marker.add(tl)
+            result.append(t)
+
+    return result
