@@ -15,7 +15,6 @@ so get_for_model is called twice for each model
 
 
 meme_voted_signal = Signal(providing_args=["instance", "meme", "points"])
-memelike_content_type = ContentType.objects.get_for_model(MemeLike)
 
 
 @receiver(meme_voted_signal, sender=MemeLike)
@@ -30,7 +29,7 @@ def notify_meme_like(sender, instance, meme, points, **kwargs):
         Notification.objects.update_or_create(
             recipient=meme.user,
             link=f"/m/{meme.uuid}",
-            content_type=memelike_content_type,
+            content_type=ContentType.objects.get_for_model(MemeLike),
             defaults={
                 "action": "liked",  # Faster to update to same value than compare when finding in db
                 "image": meme.thumbnail.url,  # Faster to update to same value than compare when finding in db
@@ -43,7 +42,6 @@ def notify_meme_like(sender, instance, meme, points, **kwargs):
 
 
 comment_voted_signal = Signal(providing_args=["instance", "comment", "points"])
-commentlike_content_type = ContentType.objects.get_for_model(CommentLike)
 
 
 @receiver(comment_voted_signal, sender=CommentLike)
@@ -59,7 +57,7 @@ def notify_comment_like(sender, instance, comment, points, **kwargs):
         Notification.objects.update_or_create(
             recipient=comment.user,
             link=f"/m/{comment.meme_uuid}",
-            content_type=commentlike_content_type,
+            content_type=ContentType.objects.get_for_model(CommentLike),
             defaults={
                 "action": "liked",  # Faster to update to same value than compare when finding in db
                 "seen": False,
