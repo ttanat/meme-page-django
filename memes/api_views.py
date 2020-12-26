@@ -143,15 +143,11 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         elif pathname == "search":
             query = self.request.query_params.get("q", "")[:64].strip()
             if query:
-                tags = re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", query)
+                tags = [t.lower() for t in re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", query)]
                 if tags:
-                    q = Q()
-                    for tag in tags:
-                        q |= Q(tags__name__iexact=tag)
+                    return memes.filter(tags_lower__contains=tags)
 
-                    return memes.filter(q).distinct() # Return search by tags
-                else:
-                    return memes.filter(caption__icontains=query).distinct() # Return search by caption
+                return memes.filter(caption__icontains=query).distinct() # Return search by caption
 
         raise NotFound
 

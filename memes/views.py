@@ -5,7 +5,7 @@ from django.db.models import F, Q, Count
 from django.utils import timezone
 from django.conf import settings
 
-from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, Tag, User, Profile
+from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, User, Profile
 from .utils import check_file_ext, check_upload_file_valid
 from analytics.signals import meme_viewed_signal, upload_signal
 
@@ -36,6 +36,7 @@ def meme_view(request, uuid):
             "page_private",
             "uuid",
             "caption",
+            "tags",
             "original",
             "large",
             "thumbnail",
@@ -64,7 +65,7 @@ def meme_view(request, uuid):
         "url": meme.get_file_url(),
         "points": meme.points,
         "num_comments": meme.num_comments,
-        "tags": meme.tags.values_list("name", flat=True)
+        "tags": meme.tags
     }
 
     # Add image of user who posted meme if exists
@@ -357,6 +358,17 @@ def upload(request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
 
+        tags = re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", request.POST.get("tags"))[:20]
+        final_tags = []
+        if tags:
+            # Remove duplicates (case-insensitive)
+            marker = set()
+            for t in tags:
+                tl = t.lower()
+                if tl not in marker:
+                    marker.add(tl)
+                    final_tags.append(t)
+
         meme = Meme.objects.create(
             user=request.user,
             username=request.user.username,
@@ -367,27 +379,14 @@ def upload(request):
             page_display_name=page.display_name if page else "",
             original=file,
             caption=caption,
+            tags=final_tags,
+            tags_lower=[t.lower() for t in final_tags],
             nsfw=nsfw,
             category=category,
             ip_address=ip
         )
 
-        tag_names = re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", request.POST.get("tags"))[:20]
-        if tag_names:
-            # Remove duplicates (case-insensitive)
-            final_tag_names = []
-            marker = set()
-            for t in tag_names:
-                tl = t.lower()
-                if tl not in marker:
-                    marker.add(tl)
-                    final_tag_names.append(t)
-            # Create tags
-            Tag.objects.bulk_create([Tag(name=t) for t in final_tag_names], ignore_conflicts=True)
-            # Add tags to meme
-            meme.tags.add(*Tag.objects.filter(name__in=final_tag_names))
-
-            upload_signal.send(sender=meme.__class__, instance=meme, tags=final_tag_names)
+        # upload_signal.send(sender=meme.__class__, instance=meme, tags=final_tags)
 
         if request.POST.get("is_profile_page"):
             response = {"success": True, "uuid": meme.uuid}

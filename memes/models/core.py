@@ -3,7 +3,7 @@ from django.db.models import Q, CheckConstraint, UniqueConstraint
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.files.base import ContentFile
-# from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_delete
@@ -115,6 +115,10 @@ class MemeManager(models.Manager):
         return super().get_queryset().filter(hidden=False)
 
 
+def empty_list():
+    return []
+
+
 def empty_json():
     return {}
 
@@ -148,8 +152,8 @@ class Meme(models.Model):
     num_comments = models.PositiveIntegerField(default=0)
     nsfw = models.BooleanField(default=False)
     category = models.ForeignKey("Category", on_delete=models.SET_NULL, null=True, blank=True)
-    tags = models.ManyToManyField("Tag", related_name="memes")
-    # tags_list = ArrayField(models.CharField(max_length=64, blank=False), blank=True)
+    tags = ArrayField(models.CharField(max_length=64, blank=False), default=empty_list)
+    tags_lower = ArrayField(models.CharField(max_length=64, blank=False), default=empty_list)
 
     report_labels = models.JSONField(default=empty_json)
     reviewed = models.BooleanField(default=False)
@@ -288,16 +292,6 @@ def delete_meme_files(sender, instance, **kwargs):
 #     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, related_name="meme")
 #     album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name="album")
 #     date_added = models.DateTimeField(auto_now_add=True)
-
-
-class Tag(models.Model):
-    name = models.CharField(max_length=64, unique=True, blank=False)
-
-    class Meta:
-        constraints = [CheckConstraint(check=Q(name__regex="^[a-zA-Z][a-zA-Z0-9_]*$"), name="tag_chars_valid")]
-
-    def __str__(self):
-        return f"{self.name}"
 
 
 class Category(models.Model):
