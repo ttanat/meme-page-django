@@ -192,11 +192,10 @@ class Meme(models.Model):
     def resize_image(self):
         # Check if original file is a GIF
         is_gif = self.get_original_ext() == ".gif"
-        prefix = f"users/{self.username}"
         # Assign new name for large
-        self.large.name = f"{prefix}/large/{set_random_filename('a.mp4' if is_gif else 'a.webp')}"
+        self.large.name = f"users/{self.username}/large/{set_random_filename('a.mp4' if is_gif else 'a.webp')}"
         # Assign new name for thumbnail
-        self.thumbnail.name = f"{prefix}/thumbnail/{set_random_filename('a.webp')}"
+        self.thumbnail.name = f"users/{self.username}/thumbnail/{set_random_filename('a.webp')}"
 
         # Invoke async function to resize GIF or image
         client.invoke(
