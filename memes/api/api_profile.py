@@ -86,7 +86,7 @@ class UserMemesViewSet(ProfileMemesViewSet):
             raise NotFound
 
         return Meme.objects.only("uuid", "thumbnail", "original") \
-                           .filter(user=user, page_private=False) \
+                           .filter(user=user, private=False, page_private=False) \
                            .order_by("-id")
 
         """

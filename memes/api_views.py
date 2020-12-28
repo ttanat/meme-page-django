@@ -92,7 +92,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             "caption",
             "points",
             "num_comments"
-        )
+        ).filter(private=False)
 
         if (not self.request.user.is_authenticated or
                 (self.request.user.is_authenticated and not self.request.user.show_nsfw)):

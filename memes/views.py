@@ -28,6 +28,7 @@ def meme_view(request, uuid):
 
     meme = get_object_or_404(
         Meme.objects.only(
+            "private",
             "username",
             "user_image",
             "page_id",
@@ -46,6 +47,9 @@ def meme_view(request, uuid):
         ),
         uuid=uuid
     )
+
+    if meme.private and (not request.user.is_authenticated or meme.username != request.user.username):
+        return HttpResponse(status=403)
 
     # Only show memes from private pages to admin, moderators, and subscribers
     if meme.page_private:
