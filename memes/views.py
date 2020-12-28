@@ -7,7 +7,7 @@ from django.conf import settings
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, User, Profile
 from .utils import check_file_ext, check_upload_file_valid, get_upload_tags
-from analytics.signals import meme_viewed_signal, upload_signal
+from analytics.signals import meme_viewed_signal
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -377,8 +377,6 @@ def upload(request):
             category=category,
             ip_address=ip
         )
-
-        # upload_signal.send(sender=meme.__class__, instance=meme, tags=final_tags)
 
         if request.POST.get("is_profile_page"):
             response = {"success": True, "uuid": meme.uuid}
