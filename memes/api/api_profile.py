@@ -69,7 +69,9 @@ class ProfileMemesViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Meme.objects.only("uuid", "thumbnail", "points", "original").filter(user=self.request.user)
+        return Meme.objects.only("uuid", "thumbnail", "points", "original") \
+                           .filter(user=self.request.user, private=False) \
+                           .order_by("-id")
 
 
 class UserMemesViewSet(ProfileMemesViewSet):
@@ -85,7 +87,7 @@ class UserMemesViewSet(ProfileMemesViewSet):
         if user.banned or not user.is_active:
             raise NotFound
 
-        return Meme.objects.only("uuid", "thumbnail", "original") \
+        return Meme.objects.only("uuid", "original", "thumbnail") \
                            .filter(user=user, private=False, page_private=False) \
                            .order_by("-id")
 
@@ -101,7 +103,18 @@ class ProfileLikesViewSet(ProfileMemesViewSet):
     serializer_class = UserMemesSerializer
 
     def get_queryset(self):
-        return Meme.objects.filter(likes__user=self.request.user, likes__point=1).order_by("-likes__id")
+        return Meme.objects.only("uuid", "original", "thumbnail") \
+                           .filter(likes__user=self.request.user, likes__point=1) \
+                           .order_by("-likes__id")
+
+
+class ProfilePrivateMemesViewSet(ProfileMemesViewSet):
+    serializer_class = UserMemesSerializer
+
+    def get_queryset(self):
+        return Meme.objects.only("uuid", "original", "thumbnail") \
+                           .filter(user=self.request.user, private=True) \
+                           .order_by("-id")
 
 
 class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):

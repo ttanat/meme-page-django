@@ -330,6 +330,7 @@ def upload(request):
     file = request.FILES.get("file")
     caption = request.POST.get("caption", "").strip()[:100].strip()
     category_name = request.POST.get("category")
+    private = request.POST.get("private") == "true"
 
     if len(re.findall("\n", caption)) > 4:
         return JsonResponse({"success": False, "message": "Maximum new lines reached"})
@@ -368,6 +369,7 @@ def upload(request):
             user=request.user,
             username=request.user.username,
             user_image=request.user.small_image.name if request.user.small_image else "",
+            private=private,
             page=page,
             page_private=page.private if page else False,
             page_name=page.name if page else "",
