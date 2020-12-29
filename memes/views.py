@@ -31,10 +31,7 @@ def meme_view(request, uuid):
             "private",
             "username",
             "user_image",
-            "page_id",
-            "page_name",
-            "page_display_name",
-            "page_private",
+            "page",
             "uuid",
             "caption",
             "tags",
@@ -51,13 +48,17 @@ def meme_view(request, uuid):
     if meme.private and (not request.user.is_authenticated or meme.username != request.user.username):
         return HttpResponse(status=403)
 
+    page = None
+    if meme.page_id:
+        page = Page.objects.only("name", "display_name", "private", "image", "admin").get(id=meme.page_id)
+
     # Only show memes from private pages to admin, moderators, and subscribers
-    if meme.page_private:
+    if page and page.private:
         # Check user is logged in and one of (subscriber, admin, moderator) <= in that order
         if not (request.user.is_authenticated and
-                (request.user.subscriptions.filter(id=meme.page_id).exists() or
-                    Page.objects.values_list("admin_id", flat=True).get(id=meme.page_id) == request.user.id or
-                        request.user.moderating.filter(id=meme.page_id).exists())):
+                (page.admin_id == request.user.id or
+                    request.user.subscriptions.filter(id=page.id).exists() or
+                        request.user.moderating.filter(id=page.id).exists())):
             return HttpResponse(status=403)
 
     meme_viewed_signal.send(sender=meme.__class__, user=request.user, meme=meme)
@@ -72,17 +73,24 @@ def meme_view(request, uuid):
         "tags": meme.tags
     }
 
+    if page:
+        response["page"] = {
+            "name": page.name,
+            "dname": page.display_name,
+            "description": page.description,
+            "num_subs": page.num_subscribers,
+            "num_posts": page.num_posts,
+        }
+        try:
+            response["page"]["image"] = page.image.url
+        except ValueError: 
+            pass
+
     # Add image of user who posted meme if exists
     try:
         response["dp_url"] = meme.user_image.url
     except ValueError:
         pass
-
-    # Add page name and display name if exists
-    if meme.page_name:
-        response["pname"] = meme.page_name
-        if meme.page_display_name:
-            response["pdname"] = meme.page_display_name
 
     # Indicate if meme is a GIF
     if meme.get_original_ext() == ".gif":

@@ -161,10 +161,10 @@ class PrivateMemeViewSet(viewsets.ReadOnlyModelViewSet):
         if "n" not in self.request.query_params:
             raise ParseError
 
-        page = get_object_or_404(Page.objects.only("id", "admin_id"), name=self.request.query_params["n"])
+        page = get_object_or_404(Page.objects.only("admin"), name=self.request.query_params["n"])
 
-        if (not page.subscribers.filter(id=self.request.user.id).exists()
-                and page.admin_id != self.request.user.id
+        if (page.admin_id != self.request.user.id
+                and not page.subscribers.filter(id=self.request.user.id).exists()
                     and not page.moderators.filter(id=self.request.user.id).exists()):
             raise PermissionDenied
 
