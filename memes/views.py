@@ -329,7 +329,6 @@ def upload(request):
     page_name = request.POST.get("page")
     file = request.FILES.get("file")
     caption = request.POST.get("caption", "").strip()[:100].strip()
-    nsfw = request.POST.get("nsfw") == "true"
     category_name = request.POST.get("category")
 
     if len(re.findall("\n", caption)) > 4:
@@ -377,7 +376,6 @@ def upload(request):
             caption=caption,
             tags=final_tags,
             tags_lower=[t.lower() for t in final_tags],
-            nsfw=nsfw,
             category=category,
             ip_address=ip
         )

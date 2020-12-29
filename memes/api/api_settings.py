@@ -17,8 +17,8 @@ def user_settings(request):
 
     if request.method == "GET":
         return Response({
-            "show_nsfw": user.show_nsfw,
-            "email": user.email or ""
+            # "show_nsfw": user.show_nsfw,
+            "email": user.email
         })
 
     elif request.method == "POST":

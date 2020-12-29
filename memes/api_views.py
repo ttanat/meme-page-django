@@ -94,9 +94,9 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             "num_comments"
         ).filter(private=False)
 
-        if (not self.request.user.is_authenticated or
-                (self.request.user.is_authenticated and not self.request.user.show_nsfw)):
-            memes = memes.filter(nsfw=False)
+        # if (not self.request.user.is_authenticated or
+        #         (self.request.user.is_authenticated and not self.request.user.show_nsfw)):
+        #     memes = memes.filter(nsfw=False)
 
         pathname = self.request.query_params.get("p", "")
 
