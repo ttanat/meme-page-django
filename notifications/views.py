@@ -15,14 +15,15 @@ def nav_notifications(request):
     notifs = Notification.objects.filter(recipient=request.user, seen=False)
     to_send = notifs[:5]
 
-    # Must force evaluation of queryset before updating
+    results = []
+    for n in to_send:
+        results.append({"link": n.link, "image": n.image.url if n.image else None, "message": n.message})
+        n.seen = True
+
     response = {
         "count": notifs.count() + ModeratorInvite.objects.filter(invitee=request.user).count(),
-        "list": [n for n in to_send.values("link", "image", "message")]
+        "results": results
     }
-
-    for n in to_send:
-        n.seen = True
 
     Notification.objects.bulk_update(to_send, ["seen"])
 

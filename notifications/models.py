@@ -10,7 +10,7 @@ class Notification(models.Model):
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
     link = models.URLField(max_length=64, blank=False)
     seen = models.BooleanField(default=False)
-    image = models.URLField(max_length=128, blank=True, default="")
+    image = models.ImageField(null=True, blank=True)
     message = models.CharField(max_length=128, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 

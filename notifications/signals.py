@@ -31,8 +31,8 @@ def notify_meme_like(sender, instance, meme, points, **kwargs):
             link=f"/m/{meme.uuid}",
             content_type=ContentType.objects.get_for_model(MemeLike),
             defaults={
-                "action": "liked",  # Faster to update to same value than compare when finding in db
-                "image": meme.thumbnail.url,  # Faster to update to same value than compare when finding in db
+                "action": "liked",
+                "image": meme.thumbnail.name,
                 "seen": False,
                 "message": message,
                 "timestamp": timezone.now(),
@@ -59,7 +59,7 @@ def notify_comment_like(sender, instance, comment, points, **kwargs):
             link=f"/m/{comment.meme_uuid}",
             content_type=ContentType.objects.get_for_model(CommentLike),
             defaults={
-                "action": "liked",  # Faster to update to same value than compare when finding in db
+                "action": "liked",
                 "seen": False,
                 "message": message,
                 "timestamp": timezone.now(),
@@ -88,7 +88,7 @@ def notify_comment(sender, instance, **kwargs):
                 action="replied",
                 recipient=reply_to.user,
                 link=f"/m/{instance.meme_uuid}",
-                image=actor.image.url if actor.image else "",
+                image=actor.image.name,
                 message=f"{actor.username} replied to your comment",
                 content_object=reply_to
             )
@@ -102,7 +102,7 @@ def notify_comment(sender, instance, **kwargs):
                 action="commented",
                 recipient=meme.user,
                 link=f"/m/{instance.meme_uuid}",
-                image=meme.thumbnail.url,
+                image=meme.thumbnail.name,
                 message=f"{actor.username} commented on your meme",
                 content_object=meme
             )
@@ -120,7 +120,7 @@ def notify_follow(sender, instance, action, pk, **kwargs):
             action="followed",
             recipient=followed_user,
             link=f"/u/{instance.username}",
-            image=instance.image.url if instance.image else "",
+            image=instance.image.name,
             message=f"{instance.username} followed you",
             content_object=followed_user
         )
@@ -145,7 +145,7 @@ def notify_subscribe(sender, instance, action, pk, **kwargs):
             action="subscribed",
             recipient=page_admin,
             link=f"/u/{new_sub.username}",
-            image=new_sub.image.url if new_sub.image else "",
+            image=new_sub.image.name,
             message=f"{new_sub.username} subscribed to {instance.name}",
             content_object=instance
         )
