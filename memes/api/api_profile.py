@@ -69,9 +69,17 @@ class ProfileMemesViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Meme.objects.only("uuid", "thumbnail", "points", "original") \
+        memes = Meme.objects.only("uuid", "thumbnail", "points", "original") \
                            .filter(user=self.request.user, private=False) \
                            .order_by("-id")
+
+        if "offset" in self.request.query_params:
+            offset = int(self.request.query_params["offset"])
+            assert offset > 0
+
+            return memes[offset:offset+self.pagination_class.page_size]
+
+        return memes
 
 
 class UserMemesViewSet(ProfileMemesViewSet):
