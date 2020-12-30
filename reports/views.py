@@ -59,8 +59,7 @@ def create_report(request):
     report_count = Report.objects.filter(
         content_type=ContentType.objects.get_for_model(to_report),
         object_id=to_report.id
-    ).count()
-    # ).distinct("reporter").count() # works only on PostgreSQL
+    ).distinct("reporter").count()
     if report_count > 100:
         if obj_name in ("user", "page"):
             to_report.banned = True
