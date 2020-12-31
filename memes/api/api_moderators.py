@@ -182,9 +182,6 @@ def remove_meme(request, uuid):
         meme.page_display_name = ""
         meme.save(update_fields=("page", "page_private", "page_name", "page_display_name"))
 
-        # Restore comments removed by moderator of page
-        meme.comments.filter(deleted=3).update(deleted=0)
-
         return HttpResponse(status=204)
 
     if meme.user_id == meme.page.admin_id:
