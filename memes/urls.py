@@ -7,62 +7,62 @@ from .api import api_auth, api_profile, api_page, api_moderators, api_settings
 
 urlpatterns = [
     # Authentication
-    path("api/auth/user/", api_auth.user_session, name="user_session"),
-    path("api/register", api_auth.register, name="register"),
+    path("auth/user/", api_auth.user_session, name="user_session"),
+    path("register", api_auth.register, name="register"),
     # path("logout", api_auth.logout_view, name="logout"),
 
-    path("api/m/<str:uuid>", views.meme_view, name="meme_view"),
-    path("api/full_res/<str:obj>/<str:uuid>", views.full_res, name="full_res"),
-    path("api/random", views.random, name="random"),
+    path("m/<str:uuid>", views.meme_view, name="meme_view"),
+    path("full_res/<str:obj>/<str:uuid>", views.full_res, name="full_res"),
+    path("random", views.random, name="random"),
 
-    path("api/like", views.like, name="like"),
-    path("api/comment/<str:action>", views.comment, name="comment"),
-    path("api/reply", views.reply, name="reply"),
-    path("api/upload", views.upload, name="upload"),
+    path("like", views.like, name="like"),
+    path("comment/<str:action>", views.comment, name="comment"),
+    path("reply", views.reply, name="reply"),
+    path("upload", views.upload, name="upload"),
 
     # Profile
-    path("api/profile", api_profile.profile),
-    path("api/user/<str:username>", api_profile.user_page),
+    path("profile", api_profile.profile),
+    path("user/<str:username>", api_profile.user_page),
     # Follow/unfollow user
-    path("api/follow/<str:username>", api_profile.follow, name="follow"),
+    path("follow/<str:username>", api_profile.follow, name="follow"),
     # Followers and following in profile page
-    path("api/profile/followers/", api_profile.get_followers),
-    path("api/profile/following/", api_profile.get_following),
+    path("profile/followers/", api_profile.get_followers),
+    path("profile/following/", api_profile.get_following),
     # Remove follower
-    path("api/remove_follower/<str:username>", api_profile.remove_follower),
+    path("remove_follower/<str:username>", api_profile.remove_follower),
 
     # Update profile bio or page description
-    path("api/update/<str:field>", views.update, name="update"),
+    path("update/<str:field>", views.update, name="update"),
 
     # Page
-    path("api/page/<str:name>", api_page.page, name="page"),
-    path("api/subscribe/<str:name>", api_page.subscribe, name="subscribe"),
-    path("api/subscribe_request/<str:name>", api_page.HandleSubscribeRequest.as_view(), name="subscribe_request"),
+    path("page/<str:name>", api_page.page, name="page"),
+    path("subscribe/<str:name>", api_page.subscribe, name="subscribe"),
+    path("subscribe_request/<str:name>", api_page.HandleSubscribeRequest.as_view(), name="subscribe_request"),
     # Invite links for private pages
-    path("api/invite/admin/<str:identifier>", api_page.HandleInviteLinkAdmin.as_view(), name="admin_invite"),
-    path("api/invite/<str:uuid>", api_page.HandleInviteLinkUser.as_view(), name="invite"),
+    path("invite/admin/<str:identifier>", api_page.HandleInviteLinkAdmin.as_view(), name="admin_invite"),
+    path("invite/<str:uuid>", api_page.HandleInviteLinkUser.as_view(), name="invite"),
     # Create new page
-    path("api/new_page", api_page.new_page, name="new_page"),
+    path("new_page", api_page.new_page, name="new_page"),
     # Moderators
-    path("api/mods/invite/<str:name>", api_moderators.invite_moderators, name="invite_moderators"),
-    path("api/mods/pending/<str:name>", api_moderators.PendingModeratorsAdmin.as_view(), name="pending_moderators"),
-    path("api/mods/current/<str:name>", api_moderators.CurrentModerators.as_view(), name="current_moderators"),
-    path("api/mods/get_mods/<str:name>", api_moderators.get_moderators, name="get_moderators"),
-    path("api/mods/handle_invite", api_moderators.HandleModeratorInvite.as_view(), name="get_invite_moderators"),
-    path("api/mods/handle_invite/<str:name>", api_moderators.HandleModeratorInvite.as_view(), name="handle_invite_moderators"),
-    path("api/mods/leave/<str:name>", api_moderators.stop_moderating, name="leave_moderators"),
+    path("mods/invite/<str:name>", api_moderators.invite_moderators, name="invite_moderators"),
+    path("mods/pending/<str:name>", api_moderators.PendingModeratorsAdmin.as_view(), name="pending_moderators"),
+    path("mods/current/<str:name>", api_moderators.CurrentModerators.as_view(), name="current_moderators"),
+    path("mods/get_mods/<str:name>", api_moderators.get_moderators, name="get_moderators"),
+    path("mods/handle_invite", api_moderators.HandleModeratorInvite.as_view(), name="get_invite_moderators"),
+    path("mods/handle_invite/<str:name>", api_moderators.HandleModeratorInvite.as_view(), name="handle_invite_moderators"),
+    path("mods/leave/<str:name>", api_moderators.stop_moderating, name="leave_moderators"),
     # Remove meme from page
-    path("api/mods/remove/meme/<str:uuid>", api_moderators.remove_meme, name="remove_meme"),
+    path("mods/remove/meme/<str:uuid>", api_moderators.remove_meme, name="remove_meme"),
     # Remove comment
-    path("api/mods/remove/comment/<str:uuid>", api_moderators.remove_comment, name="remove_comment"),
+    path("mods/remove/comment/<str:uuid>", api_moderators.remove_comment, name="remove_comment"),
 
     # Settings
-    path("api/settings", api_settings.user_settings, name="settings"),
-    path("api/page/<str:name>/settings", api_settings.PageSettings.as_view(), name="page_settings"),
+    path("settings", api_settings.user_settings, name="settings"),
+    path("page/<str:name>/settings", api_settings.PageSettings.as_view(), name="page_settings"),
 
     # Delete stuff
-    path("api/delete/<str:model>", views.delete, name="delete"),
-    path("api/delete/<str:model>/<str:identifier>", views.delete, name="delete"),
+    path("delete/<str:model>", views.delete, name="delete"),
+    path("delete/<str:model>/<str:identifier>", views.delete, name="delete"),
 ]
 
 if settings.DEBUG:

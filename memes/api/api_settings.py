@@ -104,12 +104,13 @@ class PageSettings(APIView):
             "description": page.description,
             "private": page.private,
             "permissions": page.permissions,
-            "mods": User.objects.filter(moderating=page).values_list("username", flat=True),
-            # "pending": page moderators pending
         })
 
     def get_valid_update_fields(self):
         return ("display_name", "description", "private", "permissions")
+
+    def update_fields_valid(self, update_fields):
+        return all(field in ("display_name", "description", "private", "permissions") for field in update_fields)
 
     def post(self, request, name):
         if request.FILES:
@@ -142,8 +143,7 @@ class PageSettings(APIView):
         else:
             update_fields = request.POST.getlist("update_fields")
 
-            if (not update_fields or
-                any(field not in self.get_valid_update_fields() for field in update_fields)):
+            if not update_fields or not self.update_fields_valid(update_fields):
                 return HttpResponseBadRequest()
 
             page = self.get_object(request.user, name, update_fields)

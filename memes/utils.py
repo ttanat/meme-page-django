@@ -31,9 +31,7 @@ def resize_any_image(file_key: str, dimensions: tuple):
 
 def check_gif_info(img: object) -> int:
     """ Check GIF duration in milliseconds and number of frames """
-    total_duration = 0
-    for frame in ImageSequence.Iterator(img):
-        total_duration += frame.info["duration"]
+    total_duration = sum([frame.info["duration"] for frame in ImageSequence.Iterator(img)])
 
     # Check duration is <= 30 seconds (30000 ms)
     if total_duration > 30000:

@@ -445,6 +445,10 @@ def delete(request, model, identifier=None):
                 page.delete()
 
             elif model == "user":
+                # Change user to inactive
+                request.user.is_active = False
+                request.user.save(update_fields=["is_active"])
+
                 s3 = boto3.resource("s3")
                 bucket = settings.AWS_STORAGE_BUCKET_NAME
                 username = request.user.username
@@ -496,10 +500,6 @@ def delete(request, model, identifier=None):
                             "Objects": [{"Key": key} for key in chunk]
                         }
                     )
-
-                # Change user to inactive
-                request.user.is_active = False
-                request.user.save(update_fields=["is_active"])
         else:
             return HttpResponseBadRequest("Password incorrect")
 

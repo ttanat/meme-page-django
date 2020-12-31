@@ -37,7 +37,7 @@ router.register("profile/comments", api_profile.ProfileCommentsViewSet, basename
 router.register("profile/private", api_profile.ProfilePrivateMemesViewSet, basename="Meme")
 
 urlpatterns = [
-    path("", include("memes.urls")),
+    path("api/", include("memes.urls")),
     path("api/", include(router.urls)),
     path('api/token/', api_auth.login, name='login'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

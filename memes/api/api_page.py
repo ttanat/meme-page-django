@@ -233,10 +233,12 @@ class HandleInviteLinkUser(APIView):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def new_page(request):
-    name = request.POST.get("name", "")[:32].strip()
+    name = request.POST.get("name", "").strip()
 
     if not name:
         return JsonResponse({"success": False})
+    elif len(name) > 32:
+        return JsonResponse({"success": False, "message": "Maximum 32 characters"})
     elif not re.search("^[a-zA-Z0-9_]+$", name):
         return JsonResponse({"success": False, "message": "Letters, numbers, and underscores only"})
     elif Page.objects.filter(name__iexact=name).exists():
