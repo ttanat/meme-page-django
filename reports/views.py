@@ -29,14 +29,22 @@ def create_report(request):
     # Get object that user is reporting
     obj_name = request.POST["reportObject"]
     if obj_name == "meme":
-        to_report = get_object_or_404(Meme.objects.only("user", "original", "report_labels"), uuid=request.POST["objectUid"])
+        to_report = get_object_or_404(Meme.objects.only("user", "original", "report_labels", "hidden"), uuid=request.POST["objectUid"])
     elif obj_name in ("comment", "reply"):
-        to_report = get_object_or_404(Comment.objects.only("user", "image", "report_labels"), uuid=request.POST["objectUid"])
+        to_report = get_object_or_404(Comment.objects.only("user", "image", "report_labels", "deleted"), uuid=request.POST["objectUid"])
     elif obj_name == "page":
-        to_report = get_object_or_404(Page.objects.only("admin"), name=request.POST["objectUid"])
+        to_report = get_object_or_404(Page.objects.only("admin", "banned"), name=request.POST["objectUid"])
     elif obj_name == "user":
-        to_report = get_object_or_404(User.objects.only("id"), username=request.POST["objectUid"])
+        to_report = get_object_or_404(User.objects.only("banned"), username=request.POST["objectUid"])
     else:
+        return HttpResponseBadRequest()
+
+    # Prevent reporting hidden/deleted/banned objects
+    if obj_name == "meme" and to_report.hidden:
+        return HttpResponseBadRequest()
+    elif obj_name in ("comment", "reply") and to_report.deleted:
+        return HttpResponseBadRequest()
+    elif obj_name in ("user", "page") and to_report.banned:
         return HttpResponseBadRequest()
 
     # Prevent reporting oneself
