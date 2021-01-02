@@ -149,7 +149,7 @@ def random(request):
     return JsonResponse(response)
 
 
-@api_view(("PUT", "DELETE"))
+@api_view(("POST", "PUT", "DELETE"))
 @permission_classes([IsAuthenticated])
 def like(request):
     uuid = request.GET.get("u")
@@ -162,26 +162,24 @@ def like(request):
     point = 1 if vote == "l" else -1
 
     if type_ == "m":
-        if request.method == "PUT":
-            try:
-                # Change like to dislike or vice versa
-                obj = MemeLike.objects.only("id").get(user=request.user, meme_uuid=uuid)
-                if obj.point != point:
-                    obj.point = point
-                    obj.save(update_fields=["point"])
+        if request.method == "POST":
+            # Maximum 200 likes/dislikes per hour
+            if MemeLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
+                return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
 
-                    return HttpResponse()
-            except MemeLike.DoesNotExist:
-                # Maximum 200 likes/dislikes per hour
-                if MemeLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
-                    return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
+            # Create a like/dislike
+            m = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
+            MemeLike.objects.create(user=request.user, meme=m, meme_uuid=uuid, point=point)
 
-                # Create a like/dislike
-                m = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
-                MemeLike.objects.create(user=request.user, meme=m, meme_uuid=uuid, point=point)
+            return HttpResponse(status=201)
+        elif request.method == "PUT":
+            # Change like to dislike or vice versa
+            obj = MemeLike.objects.only("id").get(user=request.user, meme_uuid=uuid)
+            if obj.point != point:
+                obj.point = point
+                obj.save(update_fields=["point"])
 
-                return HttpResponse(status=201)
-
+            return HttpResponse()
         elif request.method == "DELETE":
             # Delete a like/dislike
             MemeLike.objects.filter(user=request.user, meme_uuid=uuid).delete()
@@ -189,26 +187,24 @@ def like(request):
             return HttpResponse(status=204)
 
     elif type_ == "c":
-        if request.method == "PUT":
-            try:
-                # Change like to dislike or vice versa
-                obj = CommentLike.objects.only("id").get(user=request.user, comment_uuid=uuid)
-                if obj.point != point:
-                    obj.point = point
-                    obj.save(update_fields=["point"])
+        if request.method == "POST":
+            # Maximum 200 likes/dislikes per hour
+            if CommentLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
+                return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
 
-                    return HttpResponse()
-            except CommentLike.DoesNotExist:
-                # Maximum 200 likes/dislikes per hour
-                if CommentLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
-                    return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
+            # Create a like/dislike
+            c = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
+            CommentLike.objects.create(user=request.user, comment=c, comment_uuid=uuid, point=point)
 
-                # Create a like/dislike
-                c = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
-                CommentLike.objects.create(user=request.user, comment=c, comment_uuid=uuid, point=point)
+            return HttpResponse(status=201)
+        elif request.method == "PUT":
+            # Change like to dislike or vice versa
+            obj = CommentLike.objects.only("id").get(user=request.user, comment_uuid=uuid)
+            if obj.point != point:
+                obj.point = point
+                obj.save(update_fields=["point"])
 
-                return HttpResponse(status=201)
-
+            return HttpResponse()
         elif request.method == "DELETE":
             # Delete a like/dislike
             CommentLike.objects.filter(user=request.user, comment_uuid=uuid).delete()
