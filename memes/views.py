@@ -54,7 +54,7 @@ def meme_view(request, uuid):
 
     # Only show memes from private pages to admin, moderators, and subscribers
     if page and page.private:
-        # Check user is logged in and one of (subscriber, admin, moderator) <= in that order
+        # Check user is logged in and one of (admin, subscriber, moderator) <= in that order
         if not (request.user.is_authenticated and
                 (page.admin_id == request.user.id or
                     request.user.subscriptions.filter(id=page.id).exists() or
