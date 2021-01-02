@@ -174,7 +174,7 @@ def like(request):
             return HttpResponse(status=201)
         elif request.method == "PUT":
             # Change like to dislike or vice versa
-            obj = MemeLike.objects.only("id").get(user=request.user, meme_uuid=uuid)
+            obj = MemeLike.objects.only("point").get(user=request.user, meme_uuid=uuid)
             if obj.point != point:
                 obj.point = point
                 obj.save(update_fields=["point"])
@@ -199,7 +199,7 @@ def like(request):
             return HttpResponse(status=201)
         elif request.method == "PUT":
             # Change like to dislike or vice versa
-            obj = CommentLike.objects.only("id").get(user=request.user, comment_uuid=uuid)
+            obj = CommentLike.objects.only("point").get(user=request.user, comment_uuid=uuid)
             if obj.point != point:
                 obj.point = point
                 obj.save(update_fields=["point"])
@@ -302,13 +302,13 @@ def reply(request):
     root = get_object_or_404(
         Comment.objects.only("meme", "meme_uuid"),
         uuid=root_uuid,
-        deleted=False
+        deleted=0
     )
 
     reply_to = get_object_or_404(
         Comment.objects.only("id"),
         uuid=reply_to_uuid,
-        deleted=False
+        deleted=0
     )
 
     new_reply = Comment.objects.create(
