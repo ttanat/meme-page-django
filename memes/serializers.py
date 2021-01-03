@@ -20,8 +20,8 @@ class MemeSerializer(serializers.ModelSerializer):
         fields = ("username", "uuid", "caption", "url", "points", "num_comments")
 
     def get_url(self, obj):
-        # If meme was uploaded less than 1 minute ago, use original URL (in case it hasn't finished resizing)
-        if timezone.now() - timedelta(minutes=1) < obj.upload_date:
+        # If meme was uploaded less than 15 seconds ago, use original URL (in case it hasn't finished resizing)
+        if timezone.now() - timedelta(seconds=15) < obj.upload_date:
             return obj.original.url
 
         return obj.get_file_url()
