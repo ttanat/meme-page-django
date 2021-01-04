@@ -38,7 +38,7 @@ all_categories = top_level_categories.union(second_level_categories)
 
 def analyze_labels(labels):
     for label in labels["ModerationLabels"]:
-        if label["Confidence"] >= 75:
+        if label["Confidence"] >= 80:
             if label["ParentName"] in top_level_categories or label["Name"] in all_categories:
                 return {"hide": True}
 
