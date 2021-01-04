@@ -15,10 +15,11 @@ import re
 
 @api_view(["GET"])
 def page(request, name):
-    page = get_object_or_404(
-        Page.objects.annotate(adm=F("admin__username")).defer("created", "nsfw"),
-        name__iexact=name
-    )
+    try:
+        page = Page.objects.annotate(adm=F("admin__username")).defer("created", "nsfw").get(name=name)
+    except Page.DoesNotExist:
+        page_name = get_object_or_404(Page.objects.values_list("name", flat=True), name__iexact=name)
+        return JsonResponse({"redirect": True, "name": page_name})
 
     response = {
         "page": {

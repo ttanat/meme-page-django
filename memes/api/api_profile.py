@@ -22,8 +22,8 @@ def profile(request):
 @api_view(["GET"])
 def user_page(request, username):
     """ Get info for /u/username page """
-    user = get_object_or_404(
-        User.objects.select_related("profile").only(
+    try:
+        user = User.objects.select_related("profile").only(
             "image",
             "banned",
             "is_active",
@@ -31,9 +31,10 @@ def user_page(request, username):
             "profile__clout",
             "profile__num_followers",
             "profile__num_following"
-        ),
-        username__iexact=username
-    )
+        ).get(username=username)
+    except User.DoesNotExist:
+        username = get_object_or_404(User.objects.values_list("username", flat=True), username__iexact=username)
+        return JsonResponse({"redirect": True, "username": username})
 
     if user.banned:
         return JsonResponse({"banned": True})
@@ -91,7 +92,7 @@ class UserMemesViewSet(ProfileMemesViewSet):
         if "u" not in self.request.GET:
             raise ParseError
 
-        user = get_object_or_404(User.objects.only("banned", "is_active"), username__iexact=self.request.GET["u"])
+        user = get_object_or_404(User.objects.only("banned", "is_active"), username=self.request.GET["u"])
         if user.banned or not user.is_active:
             raise NotFound
 
