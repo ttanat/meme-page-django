@@ -106,7 +106,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Don't show memes from private pages
         if pathname != "feed":
-            memes = memes.exclude(page_private=True)
+            memes = memes.filter(page_private=False)
 
         if not pathname:
             return memes    # Currently just showing all memes
@@ -127,10 +127,12 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         elif pathname.startswith("p/"):
             pname = pathname.partition("p/")[2]
 
-            if not pname or not re.search("^[a-zA-Z0-9_]+$", pname):
+            if not re.search("^[a-zA-Z0-9_]{1,32}$", pname):
                 raise NotFound
 
-            return memes.filter(page_name=pname)
+            page = get_object_or_404(Page.objects.only("id"), name=pname)
+
+            return memes.filter(page=page)
 
         elif pathname.startswith("browse/"):
             category_name = pathname.partition("browse/")[2]
