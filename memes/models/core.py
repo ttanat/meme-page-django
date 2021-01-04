@@ -224,24 +224,31 @@ class Meme(models.Model):
         response = json.loads(response["Payload"].read())
 
         if response.get("statusCode") == 200:
-            # Assign new large and thumbnail names
-            self.large.name = f"users/{self.username}/large/{set_random_filename('a.mp4')}"
+            is_mov = self.get_original_ext() == ".mov"
+
+            # Assign new thumbnail name
             self.thumbnail.name = f"users/{self.username}/thumbnail/{set_random_filename('a.webp')}"
+
+            payload_to_send = {
+                "get_file_at": self.original.name,
+                "thumbnail_key": self.thumbnail.name,
+            }
+
+            # If file is mov, save resized video to large
+            if is_mov:
+                self.large.name = f"users/{self.username}/large/{set_random_filename('a.mp4')}"
+                payload_to_send["large_key"] = self.large.name
 
             # Invoke async function to resize video
             client.invoke(
                 FunctionName="resize_video_meme",
                 InvocationType="Event",
-                Payload=json.dumps({
-                    "get_file_at": self.original.name,
-                    "large_key": self.large.name,
-                    "thumbnail_key": self.thumbnail.name,
-                }),
+                Payload=json.dumps(payload_to_send),
                 Qualifier="$LATEST"
             )
 
-            # Save fields after invoking function to buy some time
-            self.save(update_fields=("large", "thumbnail"))
+            # Don't save large if file is mp4 because original will be overwritten
+            self.save(update_fields=("large", "thumbnail") if is_mov else ["thumbnail"])
 
             return
 
@@ -265,32 +272,6 @@ def delete_meme_files(sender, instance, **kwargs):
     instance.original.delete(False)
     instance.large.delete(False)
     instance.thumbnail.delete(False)
-
-
-# def random_album_uid():
-#     return token_urlsafe(5)
-
-
-# class Album(models.Model):
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-#     created = models.DateTimeField(auto_now_add=True)
-#     name = models.CharField(max_length=32, blank=False)
-#     uid = models.CharField(max_length=7, default=random_album_uid, unique=True)
-#     private = models.BooleanField(default=False)
-#     memes = models.ManyToManyField(Meme, through="Collection", related_name="memes")
-#     num_views = models.PositiveIntegerField(default=0)
-
-#     class Meta:
-#         constraints = [
-#             CheckConstraint(check=models.Q(name__regex="^[a-zA-Z0-9_]+$"), name="album_name_chars_valid"),
-#             UniqueConstraint(fields=["user", "name"], name="same_user_unique_album_name")
-#         ]
-
-
-# class Collection(models.Model):
-#     meme = models.ForeignKey(Meme, on_delete=models.CASCADE, related_name="meme")
-#     album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name="album")
-#     date_added = models.DateTimeField(auto_now_add=True)
 
 
 class Category(models.Model):
