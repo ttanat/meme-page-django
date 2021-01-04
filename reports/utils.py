@@ -33,12 +33,13 @@ second_level_categories = {
     "Graphic Violence Or Gore", "Self Injury", # Violence
     "Emaciated Bodies", "Corpses", "Hanging", # Visually Disturbing
 }
+all_categories = top_level_categories.union(second_level_categories)
 
 
 def analyze_labels(labels):
     for label in labels["ModerationLabels"]:
         if label["Confidence"] >= 75:
-            if label["ParentName"] in top_level_categories or label["Name"] in second_level_categories:
+            if label["ParentName"] in top_level_categories or label["Name"] in all_categories:
                 return {"hide": True}
 
     return {"hide": False}
