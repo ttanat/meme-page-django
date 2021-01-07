@@ -13,7 +13,6 @@ urlpatterns = [
 
     path("m/<str:uuid>", views.meme_view, name="meme_view"),
     path("full_res/<str:obj>/<str:uuid>", views.full_res, name="full_res"),
-    path("random", views.random, name="random"),
 
     path("like", views.like, name="like"),
     path("comment/<str:action>", views.comment, name="comment"),

@@ -250,13 +250,12 @@ class Meme(models.Model):
             # Don't save large if file is mp4 because original will be overwritten
             self.save(update_fields=("large", "thumbnail") if is_mov else ["thumbnail"])
 
-            return
+        else:
+            self.delete()
+            if response.get("statusCode") == 418:
+                raise ValidationError(response.get("errorMessage"))
 
-        self.delete()
-        if response.get("statusCode") == 418:
-            raise ValidationError(response.get("errorMessage"))
-
-        raise InternalError()
+            raise InternalError()
 
     def resize_file(self):
         if self.get_original_ext() in (".jpg", ".png", ".jpeg", ".gif"):

@@ -34,10 +34,10 @@ def meme_view(request, uuid):
             "page",
             "uuid",
             "caption",
-            "tags",
             "original",
             "large",
             "thumbnail",
+            "tags",
             "points",
             "num_comments",
             "num_views"
@@ -60,8 +60,6 @@ def meme_view(request, uuid):
                     request.user.subscriptions.filter(id=page.id).exists() or
                         request.user.moderating.filter(id=page.id).exists())):
             return HttpResponse(status=403)
-
-    meme_viewed_signal.send(sender=meme.__class__, user=request.user, meme=meme)
 
     response = {
         "username": meme.username,
@@ -112,6 +110,8 @@ def meme_view(request, uuid):
         except MemeLike.DoesNotExist:
             pass
 
+    meme_viewed_signal.send(sender=meme.__class__, user=request.user, meme=meme)
+
     return Response(response)
 
 
@@ -135,18 +135,9 @@ def full_res(request, obj, uuid):
                 "meme_uuid": comment.meme_uuid
             })
         except ValueError:
-            return HttpResponseBadRequest()
+            pass
 
     raise Http404
-
-
-@api_view(["GET"])
-def random(request):
-    queryset = Meme.objects.filter(page_private=False)
-    n = randint(0, queryset.count() - 1)
-    response = queryset.values("uuid")[n]
-
-    return JsonResponse(response)
 
 
 @api_view(("POST", "PUT", "DELETE"))
@@ -156,60 +147,44 @@ def like(request):
     type_ = request.GET.get("t")
     vote = request.GET.get("v")
 
-    if not uuid or len(uuid) != 11 or not type_ or vote not in ("l", "d"):
+    if not uuid or len(uuid) != 11 or type_ not in ("m", "c") or vote not in ("l", "d"):
         return HttpResponseBadRequest()
 
     point = 1 if vote == "l" else -1
 
     if type_ == "m":
-        if request.method == "POST":
-            # Maximum 200 likes/dislikes per hour
-            if MemeLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
-                return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
+        ObjectLike = MemeLike
+        Object = Meme
+        uuid_field = {"meme_uuid": uuid}
+    else:
+        ObjectLike = CommentLike
+        Object = Comment
+        uuid_field = {"comment_uuid": uuid}
 
-            # Create a like/dislike
-            m = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
-            MemeLike.objects.create(user=request.user, meme=m, meme_uuid=uuid, point=point)
+    if request.method == "POST":
+        # Maximum 200 likes/dislikes per hour
+        if ObjectLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
+            return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
 
-            return HttpResponse(status=201)
-        elif request.method == "PUT":
-            # Change like to dislike or vice versa
-            obj = MemeLike.objects.only("point").get(user=request.user, meme_uuid=uuid)
-            if obj.point != point:
-                obj.point = point
-                obj.save(update_fields=["point"])
+        # Create a like/dislike
+        obj = get_object_or_404(Object.objects.only("id"), uuid=uuid)
+        obj_field = {"meme" if type_ == "m" else "comment": obj}
+        ObjectLike.objects.create(user=request.user, **obj_field, **uuid_field, point=point)
 
-            return HttpResponse()
-        elif request.method == "DELETE":
-            # Delete a like/dislike
-            MemeLike.objects.filter(user=request.user, meme_uuid=uuid).delete()
+        return HttpResponse(status=201)
+    elif request.method == "PUT":
+        # Change like to dislike or vice versa
+        obj = ObjectLike.objects.only("point").get(user=request.user, **uuid_field)
+        if obj.point != point:
+            obj.point = point
+            obj.save(update_fields=["point"])
 
-            return HttpResponse(status=204)
+        return HttpResponse()
+    elif request.method == "DELETE":
+        # Delete a like/dislike
+        ObjectLike.objects.filter(user=request.user, **uuid_field).delete()
 
-    elif type_ == "c":
-        if request.method == "POST":
-            # Maximum 200 likes/dislikes per hour
-            if CommentLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
-                return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
-
-            # Create a like/dislike
-            c = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
-            CommentLike.objects.create(user=request.user, comment=c, comment_uuid=uuid, point=point)
-
-            return HttpResponse(status=201)
-        elif request.method == "PUT":
-            # Change like to dislike or vice versa
-            obj = CommentLike.objects.only("point").get(user=request.user, comment_uuid=uuid)
-            if obj.point != point:
-                obj.point = point
-                obj.save(update_fields=["point"])
-
-            return HttpResponse()
-        elif request.method == "DELETE":
-            # Delete a like/dislike
-            CommentLike.objects.filter(user=request.user, comment_uuid=uuid).delete()
-
-            return HttpResponse(status=204)
+        return HttpResponse(status=204)
 
     return HttpResponseBadRequest()
 
