@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 import re
+from string import ascii_letters
 
 
 @api_view(["GET"])
@@ -235,22 +236,31 @@ class HandleInviteLinkUser(APIView):
 @permission_classes([IsAuthenticated])
 def new_page(request):
     name = request.POST.get("name", "").strip()
-
-    if not name:
-        return JsonResponse({"success": False})
-    elif len(name) > 32:
-        return JsonResponse({"success": False, "message": "Maximum 32 characters"})
-    elif not re.search("^[a-zA-Z0-9_]+$", name):
-        return JsonResponse({"success": False, "message": "Letters, numbers, and underscores only"})
-    elif Page.objects.filter(name__iexact=name).exists():
-        return JsonResponse({"success": False, "taken": True})
-    elif Page.objects.filter(admin=request.user).count() > 2:
-        return JsonResponse({"success": False, "maximum": True})
-
     dname = request.POST.get("display_name", "")[:32].strip()
     private = request.POST.get("private") == "true"
     perm = request.POST.get("permissions") != "false"
 
-    Page.objects.create(admin=request.user, name=name, display_name=dname, private=private, permissions=perm)
+    # Check name exists
+    if not name:
+        return JsonResponse({"success": False})
+    # Check name length <= 32
+    if len(name) > 32:
+        return JsonResponse({"success": False, "message": "Maximum 32 characters"})
+    # Check at least one letter [a-zA-Z] in name
+    if not any(c in name for c in ascii_letters) or not re.search(".*[a-zA-Z].*", name):
+        return JsonResponse({"success": False, "letter": "Name must have at least one letter"})
+    # Check characters in name valid
+    if not re.search("^[a-zA-Z0-9_]+$", name):
+        return JsonResponse({"success": False, "message": "Letters, numbers, and underscores only"})
+    # Check if user already has 3 pages
+    if Page.objects.filter(admin=request.user).count() > 2:
+        return JsonResponse({"success": False, "maximum": True})
+
+    with transaction.atomic():
+        # Check if page with same name (case-insensitive) already exists
+        if Page.objects.filter(name__iexact=name).exists():
+            return JsonResponse({"success": False, "taken": True})
+
+        Page.objects.create(admin=request.user, name=name, display_name=dname, private=private, permissions=perm)
 
     return JsonResponse({"success": True, "name": name})
