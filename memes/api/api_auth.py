@@ -1,5 +1,5 @@
 from django.http import JsonResponse, HttpResponse
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import F, Q
 # from django.views.decorators.cache import cache_page
 from django.contrib.auth import authenticate
@@ -102,20 +102,22 @@ def register(request):
     # Check if email already in use with active users
     if User.objects.filter(email=email, is_active=True).exists():
         return JsonResponse({"message": "Email already in use", "field": "e"})
-    # Case-insensitive check if username already exists
-    if User.objects.filter(username__iexact=username).exists():
-        return JsonResponse({"message": "Username already taken", "field": "u", "taken": True})
 
-    user = None
     try:
-        user = User.objects.create_user(username, email, password1)
-        if user is not None:
-            refresh_token = RefreshToken.for_user(user)
-            return JsonResponse({
-                "registered": True,
-                "refresh": f"{refresh_token}",
-                "access": f"{refresh_token.access_token}"
-            })
+        with transaction.atomic():
+            # Case-insensitive check if username already exists
+            if User.objects.filter(username__iexact=username).exists():
+                return JsonResponse({"message": "Username already taken", "field": "u", "taken": True})
+
+            user = None
+            user = User.objects.create_user(username, email, password1)
+            if user is not None:
+                refresh_token = RefreshToken.for_user(user)
+                return JsonResponse({
+                    "registered": True,
+                    "refresh": f"{refresh_token}",
+                    "access": f"{refresh_token.access_token}"
+                })
     except IntegrityError:
         return JsonResponse({"message": "User already exists"})
 
