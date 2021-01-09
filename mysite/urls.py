@@ -21,7 +21,7 @@ from memes.api import api_profile, api_auth
 from rest_framework_simplejwt.views import TokenRefreshView
 
 router = routers.DefaultRouter()
-router.register("memes/pv", api_views.PrivateMemeViewSet, basename="Meme")
+router.register("memes/private-page", api_views.PrivatePageMemeViewSet, basename="Meme")
 router.register("memes", api_views.MemeViewSet, basename="Meme")
 
 router.register("comments", api_views.CommentViewSet, basename="Comment")

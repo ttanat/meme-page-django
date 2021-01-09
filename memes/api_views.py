@@ -154,16 +154,16 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         raise NotFound
 
 
-class PrivateMemeViewSet(viewsets.ReadOnlyModelViewSet):
+class PrivatePageMemeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MemeSerializer
     pagination_class = MemePagination
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if "n" not in self.request.query_params:
+        if "name" not in self.request.query_params:
             raise ParseError
 
-        page = get_object_or_404(Page.objects.only("admin"), name=self.request.query_params["n"])
+        page = get_object_or_404(Page.objects.only("admin"), name=self.request.query_params["name"])
 
         if (page.admin_id != self.request.user.id
                 and not page.subscribers.filter(id=self.request.user.id).exists()
