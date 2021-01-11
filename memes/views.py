@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.conf import settings
 
 from .models import Page, Meme, Comment, MemeLike, CommentLike, Category, User, Profile
-from .utils import check_file_ext, check_upload_file_valid, get_upload_tags
+from .utils import check_file_ext, check_upload_file_size, check_upload_file_valid, get_upload_tags
 from analytics.signals import meme_viewed_signal
 
 from rest_framework.decorators import api_view, permission_classes
@@ -315,6 +315,9 @@ def upload(request):
         return JsonResponse({"success": False, "message": "Maximum new lines reached"})
 
     if file:
+        # Check file size here first to prevent calling check_upload_file_valid for very large files
+        if not check_upload_file_size(file.name, file.size):
+            return JsonResponse({"success": False, "message": "File too large"})
         # Check file is valid
         res = check_upload_file_valid(file)
         if not res["success"]:

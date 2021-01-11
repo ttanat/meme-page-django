@@ -29,6 +29,18 @@ def resize_any_image(file_key: str, dimensions: tuple):
     )
 
 
+def check_upload_file_size(fname: str, size: int) -> bool:
+    # Get file extension
+    ext = os.path.splitext(fname)[1].lower()
+    # Check file sizes for images or videos
+    if ext in (".jpg", ".png", ".jpeg", ".gif"):
+        return size <= 5242880
+    elif ext in (".mp4", ".mov"):
+        return size <= 15728640
+
+    return False
+
+
 def check_gif_info(img: object) -> int:
     """ Check GIF duration in milliseconds and number of frames """
     total_duration = sum([frame.info["duration"] for frame in ImageSequence.Iterator(img)])
