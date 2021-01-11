@@ -56,8 +56,10 @@ def check_gif_info(img: object) -> int:
 
 
 def check_upload_file_valid(file: object) -> dict:
-    # Get file extension
-    ext = os.path.splitext(file.name)[1].lower()
+    # Check file name and get extension in lowercase
+    tmp, ext = os.path.splitext(file.name.lower())
+    if not tmp or not ext:
+        return {"success": False, "message": "Invalid file name"}
 
     # Check content type and file extension is valid
     if (file.content_type not in ("image/jpeg", "image/png", "image/gif", "video/mp4", "video/quicktime")
