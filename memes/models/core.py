@@ -224,8 +224,6 @@ class Meme(models.Model):
         response = json.loads(response["Payload"].read())
 
         if response.get("statusCode") == 200:
-            is_mov = self.get_original_ext() == ".mov"
-
             # Assign new thumbnail name
             self.thumbnail.name = f"users/{self.username}/thumbnail/{set_random_filename('a.webp')}"
 
@@ -234,10 +232,8 @@ class Meme(models.Model):
                 "thumbnail_key": self.thumbnail.name,
             }
 
-            # If file is mov, save resized video to large
-            if is_mov:
-                self.large.name = f"users/{self.username}/large/{set_random_filename('a.mp4')}"
-                payload_to_send["large_key"] = self.large.name
+            if self.get_original_ext() == ".mov":
+                payload_to_send["meme_id"] = self.id
 
             # Invoke async function to resize video
             client.invoke(
@@ -247,8 +243,8 @@ class Meme(models.Model):
                 Qualifier="$LATEST"
             )
 
-            # Don't save large if file is mp4 because original will be overwritten
-            self.save(update_fields=("large", "thumbnail") if is_mov else ["thumbnail"])
+            # Save new thumbnail name
+            self.save(update_fields=["thumbnail"])
 
         else:
             self.delete()
