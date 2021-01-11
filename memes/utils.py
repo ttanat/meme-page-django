@@ -73,8 +73,12 @@ def check_upload_file_valid(file: object) -> dict:
                 if img.width < 320 or img.height < 320:
                     return {"success": False, "message": "Image must be at least 320x320 pixels"}
 
-    elif ext in (".mp4", ".mov") and file.size > 15728640:
-        return {"success": False, "message": "Maximum video file size is 15 MB"}
+    elif ext in (".mp4", ".mov"):
+        if file.size > 15728640:
+            return {"success": False, "message": "Maximum video file size is 15 MB"}
+
+    else:
+        return {"success": False, "message": "Invalid file type"}
 
     return {"success": True}
 
