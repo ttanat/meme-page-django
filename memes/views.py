@@ -324,8 +324,8 @@ def upload(request):
             return JsonResponse(res)
 
         # Check upload limits (50 per 24 hours)
-        if Meme.objects.filter(user=request.user, upload_date__gt=timezone.now()-timedelta(days=1)).count() >= 50:
-            return JsonResponse({"success": False, "message": "Upload limit is 50 per 24 hours"})
+        if Meme.all_objects.filter(user=request.user, upload_date__gt=timezone.now()-timedelta(days=1)).count() >= 50:
+            return JsonResponse({"success": False, "message": "Upload limit is 50 per day"})
 
         if category_name:
             if category_name not in Category.Name.values:

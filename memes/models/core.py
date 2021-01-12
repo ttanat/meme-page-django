@@ -115,6 +115,12 @@ class MemeManager(models.Manager):
         return super().get_queryset().filter(hidden=False)
 
 
+class AllMemesManager(models.Manager):
+    def get_queryset(self):
+        # Return all memes
+        return super().get_queryset()
+
+
 def empty_list():
     return []
 
@@ -163,9 +169,11 @@ class Meme(models.Model):
     ip_address = models.GenericIPAddressField(null=True)
 
     objects = MemeManager()
+    all_objects = AllMemesManager()
 
     class Meta:
         ordering = ["-id"]
+        indexes = [models.Index(fields=["user", "upload_date"])]
 
     def __str__(self):
         return f"{self.id}"
