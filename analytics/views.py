@@ -19,7 +19,7 @@ def trending(request):
         data = t.data
         create_new_data = t.timestamp < timezone.now() - timedelta(hours=1)
     except Trending.DoesNotExist:
-        # Should only get here on first ever time this view is called
+        # Should only get here the first ever time this view is called
         data = []
         create_new_data = True
 
@@ -30,7 +30,8 @@ def trending(request):
         hrs3 = now - timedelta(hours=3)
         days2 = now - timedelta(days=2)
 
-        tags_data = Meme.objects.filter(upload_date__gt=now-timedelta(weeks=1)).values_list("tags_lower", "upload_date")
+        tags_data = Meme.objects.filter(private=False, page_private=False, upload_date__gt=now-timedelta(weeks=1)) \
+                                .values_list("tags_lower", "upload_date")
 
         points = {}
         for tags, timestamp in tags_data:
