@@ -141,17 +141,20 @@ class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def follow(request, username):
-    user = request.user
-    if user.username == username:
-        return HttpResponseBadRequest()
+    if request.user.username.lower() == username.lower():
+        return HttpResponseBadRequest("Cannot follow yourself. smh")
 
     user_to_follow = get_object_or_404(User.objects.only("id"), username=username)
-    is_following = user.follows.filter(id=user_to_follow.id).exists()
+    is_following = request.user.follows.filter(id=user_to_follow.id).exists()
 
     if is_following:
-        user.follows.remove(user_to_follow)    # Unfollow
+        request.user.follows.remove(user_to_follow)    # Unfollow
     else:
-        user.follows.add(user_to_follow)    # Follow
+        # Limit number that user can follow
+        if Profile.objects.values_list("num_following", flat=True).get(user=request.user) >= 1000:
+            return HttpResponseBadRequest("Cannot follow more than 1000 users")
+
+        request.user.follows.add(user_to_follow)    # Follow
 
     return JsonResponse({"following": not is_following})
 
