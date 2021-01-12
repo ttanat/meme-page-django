@@ -165,11 +165,10 @@ def like(request):
             # Prevent liking other users' private memes
             if meme.private and meme.user_id != request.user.id:
                 return HttpResponseBadRequest()
-            # Prevent liking memes posted on private pages if not subscriber, moderator, or admin
+            # Prevent liking memes posted on private pages if not subscriber or moderator
             if meme.page_private:
                 if not (request.user.subscriptions.filter(id=meme.page_id).exists() or
-                            request.user.moderating.filter(id=meme.page_id).exists() or
-                                request.user.page_set.filter(id=meme.page_id).exists()):
+                            request.user.moderating.filter(id=meme.page_id).exists()):
                     return HttpResponseBadRequest()
             object_field = {"meme": meme}
         else:
@@ -215,11 +214,10 @@ def comment(request, action):
         # Prevent commenting on others' private memes
         if meme.private and meme.user_id != request.user.id:
             return HttpResponseBadRequest()
-        # Prevent commenting on memes posted on private pages if not subscriber, moderator, or admin
+        # Prevent commenting on memes posted on private pages if not subscriber or moderator
         if meme.page_private:
             if not (request.user.subscriptions.filter(id=meme.page_id).exists() or
-                        request.user.moderating.filter(id=meme.page_id).exists() or
-                            request.user.page_set.filter(id=meme.page_id).exists()):
+                        request.user.moderating.filter(id=meme.page_id).exists()):
                 return HttpResponseBadRequest()
 
         comment = Comment.objects.create(
