@@ -328,7 +328,7 @@ class Comment(models.Model):
     reviewed = models.BooleanField(default=False)
 
     class Deleted(models.IntegerChoices):
-        NO = 0, _("Not deleted"),
+        NO = 0, _("Not deleted")
         USER = 1, _("Deleted by user")
         MEME_OP = 2, _("Deleted by meme OP")
         MODERATOR = 3, _("Removed by moderator")
@@ -354,7 +354,7 @@ def delete_comment_image(sender, instance, **kwargs):
 
 class Like(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    point = models.IntegerField()
+    point = models.SmallIntegerField()
     liked_on = models.DateTimeField(auto_now=True)
 
     class Meta:
