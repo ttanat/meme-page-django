@@ -337,9 +337,6 @@ def upload(request):
                             or page.moderators.filter(id=request.user.id).exists()):
                 return JsonResponse({"success": False, "message": "Cannot post to this page"})
 
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
-
         tags = re.findall("#([a-zA-Z][a-zA-Z0-9_]*)", request.POST.get("tags"))[:20]
         final_tags = get_upload_tags(tags)
 
@@ -355,14 +352,11 @@ def upload(request):
             caption=caption,
             tags=final_tags,
             tags_lower=[t.lower() for t in final_tags],
-            category=category,
-            ip_address=ip
+            category=category
         )
 
         if request.POST.get("is_profile_page"):
-            response = {"success": True, "uuid": meme.uuid}
-
-            return JsonResponse(response, status=201)
+            return JsonResponse({"success": True, "uuid": meme.uuid}, status=201)
         else:
             return JsonResponse({"success": True}, status=201)
 

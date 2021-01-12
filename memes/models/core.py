@@ -159,13 +159,11 @@ class Meme(models.Model):
     category = models.ForeignKey("Category", on_delete=models.SET_NULL, null=True, blank=True)
     tags = ArrayField(models.CharField(max_length=64, blank=False), default=empty_list)
     tags_lower = ArrayField(models.CharField(max_length=64, blank=False), default=empty_list)
+    num_views = models.PositiveIntegerField(default=0)
 
     report_labels = models.JSONField(default=empty_json)
     reviewed = models.BooleanField(default=False)
     hidden = models.BooleanField(default=False)
-
-    num_views = models.PositiveIntegerField(default=0)
-    ip_address = models.GenericIPAddressField(null=True)
 
     objects = MemeManager()
     all_objects = AllMemesManager()
