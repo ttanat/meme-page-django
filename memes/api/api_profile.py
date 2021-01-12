@@ -1,9 +1,9 @@
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 
 from memes.serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer
-from memes.models import User, Page, Meme, Comment
+from memes.models import User, Page, Meme, Comment, Profile
 
 from rest_framework import viewsets, pagination
 from rest_framework.decorators import api_view, permission_classes
@@ -139,6 +139,7 @@ class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def follow(request, username):
     user = request.user
     if user.username == username:
