@@ -39,8 +39,7 @@ def meme_view(request, uuid):
             "thumbnail",
             "tags",
             "points",
-            "num_comments",
-            "num_views"
+            "num_comments"
         ),
         uuid=uuid
     )
