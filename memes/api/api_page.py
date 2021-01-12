@@ -4,6 +4,7 @@ from django.db.models import F, Q
 from django.db import transaction
 
 from memes.models import Page, SubscribeRequest, User, InviteLink
+from analytics.signals import page_view_signal
 
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
@@ -50,6 +51,8 @@ def page(request, name):
 
     if response["show"]:
         response["page"]["moderators"] = page.moderators.values_list("username", flat=True)
+
+    page_view_signal.send(sender=page.__class__, user=request.user, page=page)
 
     return Response(response)
 
