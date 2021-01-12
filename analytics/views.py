@@ -15,9 +15,17 @@ def trending(request):
     """ Get list of most popular hashtags """
 
     try:
-        d = Trending.objects.get(timestamp__gte=timezone.now()-timedelta(hours=1))
-        data = d.data
+        t = Trending.objects.last()
+        data = t.data
+        create_new_data = t.timestamp < timezone.now() - timedelta(hours=1)
     except Trending.DoesNotExist:
+        # Should only get here on first ever time this view is called
+        data = []
+        create_new_data = True
+
+    if create_new_data:
+        new_trending = Trending.objects.create(data=data)
+
         now = timezone.now()
         hrs3 = now - timedelta(hours=3)
         days2 = now - timedelta(days=2)
@@ -32,6 +40,7 @@ def trending(request):
                 points[tag] = points.get(tag, 0) + point
 
         data = sorted(points, key=points.get, reverse=True)[:10]
-        Trending.objects.create(data=data)
+        new_trending.data = data
+        new_trending.save(update_fields=["data"])
 
     return JsonResponse(data, safe=False)
