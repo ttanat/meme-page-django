@@ -101,8 +101,11 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         pathname = self.request.query_params.get("p", "")
 
         # Get memes before certain datetime
-        if pathname and "before" in self.request.query_params:
+        if "before" in self.request.query_params:
             memes = memes.filter(upload_date__lte=parse_datetime(self.request.query_params["before"]))
+        else:
+            # Don't get memes uploaded within past minute
+            memes = memes.filter(upload_date__lt=timezone.now()-timedelta(minutes=1))
 
         # Don't show memes from private pages
         if pathname != "feed":
