@@ -157,7 +157,6 @@ def remove_meme(request, uuid):
             "user",
             "page_private",
             "page_name",
-            "page_display_name",
             "page__admin_id",
             "page__num_posts"
         ),
@@ -179,8 +178,7 @@ def remove_meme(request, uuid):
         meme.page = None
         meme.page_private = False
         meme.page_name = ""
-        meme.page_display_name = ""
-        meme.save(update_fields=("page", "page_private", "page_name", "page_display_name"))
+        meme.save(update_fields=("page", "page_private", "page_name"))
 
         return HttpResponse(status=204)
 

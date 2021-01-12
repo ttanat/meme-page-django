@@ -84,7 +84,6 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
             "username",
             "user_image",
             "page_name",
-            "page_display_name",
             "original",
             "large",
             "upload_date",

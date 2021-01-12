@@ -139,7 +139,6 @@ class Meme(models.Model):
     page = models.ForeignKey("Page", on_delete=models.SET_NULL, null=True, blank=True)
     page_private = models.BooleanField(default=False)
     page_name = models.CharField(max_length=32, blank=True)
-    page_display_name = models.CharField(max_length=32, blank=True)
 
     # Store original file
     original = models.FileField(upload_to=original_meme_path, null=False, blank=False)

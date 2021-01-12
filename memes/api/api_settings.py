@@ -148,13 +148,9 @@ class PageSettings(APIView):
 
             page = self.get_object(request.user, name, update_fields)
 
-            meme_fields_to_update = {}
-
             if "display_name" in update_fields:
                 new_display_name = request.POST["display_name"][:32].strip()
                 page.display_name = new_display_name
-                # Add field to update in meme table
-                meme_fields_to_update["page_display_name"] = new_display_name
 
             if "description" in update_fields:
                 page.description = request.POST["description"][:150].strip()
@@ -162,17 +158,15 @@ class PageSettings(APIView):
             if "private" in update_fields:
                 new_private = request.POST["private"] == "true"
                 page.private = new_private
-                # Add field to update in meme table
-                meme_fields_to_update["page_private"] = new_private
 
             if "permissions" in update_fields:
                 page.permissions = request.POST["permissions"] != "false"
 
             page.save()
 
-            # Update cached values of all memes posted to this page (page_display_name and page_private)
-            if meme_fields_to_update:
-                page.meme_set.update(**meme_fields_to_update)
+            # Update cached values of all memes posted to this page (page_private)
+            if "private" in update_fields:
+                page.meme_set.update(page_private=new_private)
 
         return HttpResponse()
 

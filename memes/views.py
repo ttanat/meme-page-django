@@ -351,7 +351,6 @@ def upload(request):
             page=page,
             page_private=page.private if page else False,
             page_name=page.name if page else "",
-            page_display_name=page.display_name if page else "",
             original=file,
             caption=caption,
             tags=final_tags,
@@ -411,7 +410,7 @@ def delete(request, model, identifier=None):
             if model == "page":
                 # Select image and cover for deleting file in post_delete signal
                 page = get_object_or_404(Page.objects.only("image", "cover"), admin=request.user, name=identifier)
-                page.meme_set.all().update(page_private=False, page_name="", page_display_name="")
+                page.meme_set.all().update(page_private=False, page_name="")
                 page.delete()
 
             elif model == "user":

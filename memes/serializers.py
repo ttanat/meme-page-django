@@ -36,7 +36,6 @@ class MemeSerializer(serializers.ModelSerializer):
         # Get page name and display name if meme is posted to a page and request is not sent from a page
         if not self.context["request"].query_params.get("p", "").startswith("p/") and obj.page_name:
             ret["pname"] = obj.page_name
-            ret["pdname"] = obj.page_display_name or ""
 
         # Get image of user who posted meme
         try:
