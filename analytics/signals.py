@@ -2,7 +2,7 @@ from django.dispatch import receiver, Signal
 from django.db.models import F
 
 from .models import View
-from memes.models import Meme
+from memes.models import Meme, Profile
 
 
 meme_viewed_signal = Signal(providing_args=["user", "meme"])
@@ -14,3 +14,14 @@ def add_meme_view(sender, user, meme, **kwargs):
     meme.save(update_fields=["num_views"])
 
     View.objects.create(user=user if user.is_authenticated else None, content_object=meme)
+
+
+profile_view_signal = Signal(providing_args=["user", "profile"])
+
+
+@receiver(profile_view_signal, sender=Profile)
+def add_profile_view(sender, user, profile, **kwargs):
+    profile.num_views = F("num_views") + 1
+    profile.save(update_fields=["num_views"])
+
+    View.objects.create(user=user if user.is_authenticated else None, content_object=profile)

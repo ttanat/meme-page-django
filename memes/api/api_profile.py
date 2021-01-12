@@ -4,6 +4,7 @@ from django.db.models import F, Q
 
 from memes.serializers import ProfileMemesSerializer, UserMemesSerializer, ProfileCommentsSerializer
 from memes.models import User, Page, Meme, Comment, Profile
+from analytics.signals import profile_view_signal
 
 from rest_framework import viewsets, pagination
 from rest_framework.decorators import api_view, permission_classes
@@ -23,18 +24,13 @@ def profile(request):
 def user_page(request, username):
     """ Get info for /u/username page """
     try:
-        user = User.objects.select_related("profile").only(
-            "image",
-            "banned",
-            "is_active",
-            "profile__bio",
-            "profile__clout",
-            "profile__num_followers",
-            "profile__num_following"
-        ).get(username=username)
+        user = User.objects.only("image", "banned", "is_active").get(username=username)
+        profile = Profile.objects.only("bio", "clout", "num_followers", "num_following").get(user=user)
     except User.DoesNotExist:
         username = get_object_or_404(User.objects.values_list("username", flat=True), username__iexact=username)
         return JsonResponse({"redirect": True, "username": username})
+
+    profile_view_signal.send(sender=profile.__class__, user=request.user, profile=profile)
 
     if user.banned:
         return JsonResponse({"banned": True})
@@ -44,10 +40,10 @@ def user_page(request, username):
     return Response({
         "image": user.image.url if user.image else None,
         "is_following": request.user.follows.filter(pk=user.pk).exists() if request.user.is_authenticated else False,
-        "bio": user.profile.bio,
-        "clout": user.profile.clout,
-        "num_followers": user.profile.num_followers,
-        "num_following": user.profile.num_following,
+        "bio": profile.bio,
+        "clout": profile.clout,
+        "num_followers": profile.num_followers,
+        "num_following": profile.num_following,
         "moderating": Page.objects.filter(Q(admin=user)|Q(moderators=user)).annotate(dname=F("display_name")).values("name", "dname", "private")
     })
 
