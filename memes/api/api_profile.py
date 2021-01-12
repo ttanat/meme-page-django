@@ -138,7 +138,7 @@ class ProfileCommentsViewSet(viewsets.ReadOnlyModelViewSet):
         ).filter(user=self.request.user, deleted=False).order_by("-id")
 
 
-@api_view(["GET"])
+@api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def follow(request, username):
     if request.user.username.lower() == username.lower():
