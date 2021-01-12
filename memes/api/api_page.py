@@ -50,7 +50,9 @@ def page(request, name):
                             or page.moderators.filter(id=request.user.id).exists())
 
     if response["show"]:
-        response["page"]["moderators"] = page.moderators.values_list("username", flat=True)
+        mods = [p for p in page.moderators.values_list("username", flat=True).order_by("date_joined")]
+        mods.remove(page.adm)
+        response["page"]["moderators"] = mods
 
     page_view_signal.send(sender=page.__class__, user=request.user, page=page)
 
@@ -264,6 +266,8 @@ def new_page(request):
         if Page.objects.filter(name__iexact=name).exists():
             return JsonResponse({"success": False, "taken": True})
 
-        Page.objects.create(admin=request.user, name=name, display_name=dname, private=private, permissions=perm)
+        page = Page.objects.create(admin=request.user, name=name, display_name=dname, private=private, permissions=perm)
+
+    page.moderators.add(request.user)
 
     return JsonResponse({"success": True, "name": name})
