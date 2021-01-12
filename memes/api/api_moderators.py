@@ -64,8 +64,14 @@ class CurrentModerators(APIView):
         if "username" not in request.GET:
             return HttpResponseBadRequest()
 
+        usernames = request.GET.getlist("username")
+        if request.user.username in usernames:
+            usernames.remove(request.user.username)
+        if not usernames:
+            return HttpResponseBadRequest()
+
         page = get_object_or_404(Page.objects.only("id"), admin=request.user, name=name)
-        page.moderators.remove(*User.objects.only("id").filter(username__in=request.GET.getlist("username")))
+        page.moderators.remove(*User.objects.only("id").filter(username__in=usernames))
 
         return HttpResponse(status=204)
 
@@ -81,16 +87,16 @@ def get_moderators(request, name):
     If any other user, get all moderators (list)
     """
 
-    page = get_object_or_404(Page.objects.only("admin_id"), name=name)
+    page = get_object_or_404(Page.objects.only("admin"), name=name)
 
     if request.user.id == page.admin_id:
         return Response({
-            "current": page.moderators.values_list("username", flat=True),
+            "current": page.moderators.values_list("username", flat=True).order_by("date_joined"),
             "pending": page.moderatorinvite_set.values_list("invitee__username", flat=True),
             "admin": True
         })
 
-    return Response({"current": page.moderators.values_list("username", flat=True)})
+    return Response({"current": page.moderators.values_list("username", flat=True).order_by("date_joined")})
 
 
 """ For everyone except admin """
@@ -140,10 +146,14 @@ class HandleModeratorInvite(APIView):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def stop_moderating(request, name):
-    """ For moderator to leave and stop being a moderator """
+    """ For mods to stop being mods """
     """ name is page name """
 
-    page = get_object_or_404(Page.objects.only("id"), moderators=request.user, name=name)
+    page = get_object_or_404(Page.objects.only("admin"), moderators=request.user, name=name)
+
+    if page.admin_id == request.user.id:
+        return HttpResponseBadRequest()
+
     page.moderators.remove(request.user)
 
     return HttpResponse(status=204)
