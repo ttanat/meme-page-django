@@ -162,10 +162,6 @@ def like(request):
         uuid_field = {"comment_uuid": uuid}
 
     if request.method == "POST":
-        # Maximum 200 likes/dislikes per hour
-        if ObjectLike.objects.filter(user=request.user, point=point, liked_on__gt=timezone.now()-timedelta(hours=1)).count() >= 200:
-            return HttpResponseBadRequest(f"Too many {'' if point == 1 else 'dis'}likes")
-
         # Create a like/dislike
         obj = get_object_or_404(Object.objects.only("id"), uuid=uuid)
         obj_field = {"meme" if type_ == "m" else "comment": obj}

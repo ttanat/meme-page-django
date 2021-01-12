@@ -373,7 +373,6 @@ class MemeLike(Like):
         constraints = [UniqueConstraint(fields=["user", "meme"], name="unique_meme_vote")]
         indexes = [
             models.Index(fields=["user", "meme_uuid"]), # Used in api_views.join_votes_with_data and views.like (PUT request)
-            models.Index(fields=["user", "point", "liked_on"]), # Used when creating like
         ]
 
     def __str__(self):
@@ -388,7 +387,6 @@ class CommentLike(Like):
         constraints = [UniqueConstraint(fields=["user", "comment"], name="unique_comment_vote")]
         indexes = [
             models.Index(fields=["user", "comment_uuid"]), # Used in api_views.join_votes_with_data and views.like (PUT request)
-            models.Index(fields=["user", "point", "liked_on"]), # Used when creating like
         ]
 
     def __str__(self):
