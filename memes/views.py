@@ -153,18 +153,30 @@ def like(request):
 
     if type_ == "m":
         ObjectLike = MemeLike
-        Object = Meme
         uuid_field = {"meme_uuid": uuid}
     else:
         ObjectLike = CommentLike
-        Object = Comment
         uuid_field = {"comment_uuid": uuid}
 
     if request.method == "POST":
         # Create a like/dislike
-        obj = get_object_or_404(Object.objects.only("id"), uuid=uuid)
-        obj_field = {"meme" if type_ == "m" else "comment": obj}
-        ObjectLike.objects.create(user=request.user, **obj_field, **uuid_field, point=point)
+        if type_ == "m":
+            meme = get_object_or_404(Meme.objects.only("user", "private", "page", "page_private"), uuid=uuid)
+            # Prevent liking other users' private memes
+            if meme.private and meme.user_id != request.user.id:
+                return HttpResponseBadRequest()
+            # Prevent liking memes posted on private pages if not subscriber, moderator, or admin
+            if meme.page_private:
+                if not (request.user.subscriptions.filter(id=meme.page_id).exists() or
+                            request.user.moderating.filter(id=meme.page_id).exists() or
+                                request.user.page_set.filter(id=meme.page_id).exists()):
+                    return HttpResponseBadRequest()
+            object_field = {"meme": meme}
+        else:
+            comment = get_object_or_404(Comment.objects.only("id"), uuid=uuid)
+            object_field = {"comment": comment}
+
+        ObjectLike.objects.create(user=request.user, **object_field, **uuid_field, point=point)
 
         return HttpResponse(status=201)
     elif request.method == "PUT":
@@ -198,7 +210,17 @@ def comment(request, action):
         if image and not check_file_ext(image.name, (".jpg", ".png", ".jpeg")):
             return HttpResponseBadRequest()
 
-        meme = get_object_or_404(Meme.objects.only("id"), uuid=uuid)
+        meme = get_object_or_404(Meme.objects.only("user", "private", "page", "page_private"), uuid=uuid)
+
+        # Prevent commenting on others' private memes
+        if meme.private and meme.user_id != request.user.id:
+            return HttpResponseBadRequest()
+        # Prevent commenting on memes posted on private pages if not subscriber, moderator, or admin
+        if meme.page_private:
+            if not (request.user.subscriptions.filter(id=meme.page_id).exists() or
+                        request.user.moderating.filter(id=meme.page_id).exists() or
+                            request.user.page_set.filter(id=meme.page_id).exists()):
+                return HttpResponseBadRequest()
 
         comment = Comment.objects.create(
             user=request.user,
