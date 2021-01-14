@@ -1,8 +1,8 @@
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 # from django.views.decorators.cache import cache_page
 
-from .models import Trending
+from .models import Trending, AdminHoneypot
 from memes.models import Meme
 
 from rest_framework.decorators import api_view
@@ -45,3 +45,17 @@ def trending(request):
         new_trending.save(update_fields=["data"])
 
     return JsonResponse(data, safe=False)
+
+
+@api_view(["GET"])
+def admin(request):
+    """ Fake admin site, respond ONLY with errors """
+
+    user = request.user if request.user.is_authenticated else None
+
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+
+    AdminHoneypot.objects.create(user=user, ip_address=ip)
+
+    return HttpResponse(status=403)

@@ -6,6 +6,7 @@ from . import views
 
 urlpatterns = [
     path("trending", views.trending, name="trending"),
+    path("admin", views.admin, name="admin"),
 ]
 
 if settings.DEBUG:
