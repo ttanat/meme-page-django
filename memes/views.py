@@ -351,7 +351,11 @@ def upload(request):
             category = Category.objects.get_or_create(name=category_name)[0]    # Change this before deployment
 
         if page_name:
-            page = get_object_or_404(Page.objects.only("admin_id", "private", "permissions"), name=page_name)
+            # Don't allow uploads to pages if meme is private
+            if private:
+                return JsonResponse({"success": False, "message": "Cannot upload private memes to a page"})
+
+            page = get_object_or_404(Page.objects.only("admin", "private", "permissions"), name=page_name)
             # User must be admin or subscriber or moderator to post to page
             if not (page.admin_id == request.user.id
                         or (page.permissions and page.subscribers.filter(id=request.user.id).exists())
