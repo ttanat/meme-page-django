@@ -451,7 +451,8 @@ def delete(request, model, identifier=None):
                     s3.meta.client.copy({"Bucket": bucket, "Key": large}, bucket, new_large)
                     keys_to_delete.append(large)
                     # Delete thumbnail
-                    meme.thumbnail.delete(False)
+                    keys_to_delete.append(meme.thumbnail.name)
+                    meme.thumbnail.name = ""
                 # Bulk update all memes
                 Meme.objects.bulk_update(memes, ("username", "user_image", "original", "large", "thumbnail"))
 
