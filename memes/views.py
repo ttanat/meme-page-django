@@ -419,8 +419,11 @@ def delete(request, model, identifier=None):
         if password and request.user.check_password(password):
             if model == "page":
                 # Select image and cover for deleting file in post_delete signal
-                page = get_object_or_404(Page.objects.only("image", "cover"), admin=request.user, name=identifier)
-                page.meme_set.all().update(page_private=False, page_name="")
+                page = get_object_or_404(Page.objects.only("image", "cover", "private"), admin=request.user, name=identifier)
+                # Update memes to private if page is private
+                private = {"private": True} if page.private else {}
+                Meme.objects.filter(page=page).update(page=None, page_private=False, page_name="", **private)
+                # Delete page
                 page.delete()
 
             elif model == "user":
