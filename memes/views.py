@@ -387,31 +387,26 @@ def upload(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update(request, field):
-    """ Update bio for user or description for page """
+    """ Update bio for user or description for page (not in settings page) """
     if field == "bio":
-        if "new_val" not in request.POST:
-            return HttpResponseBadRequest()
+        if "new_val" in request.POST:
+            new_bio = request.POST["new_val"][:150].strip()
+            Profile.objects.filter(user=request.user).update(bio=new_bio)
 
-        new_bio = request.POST["new_val"][:150].strip()
+            return JsonResponse({"new_val": new_bio})
 
-        Profile.objects.filter(user=request.user).update(bio=new_bio)
-
-        return JsonResponse({"new_val": new_bio})
+        return HttpResponseBadRequest()
 
     elif field == "description":
-        if "name" not in request.POST or "new_val" not in request.POST:
-            return HttpResponseBadRequest()
-
-        new_description = request.POST["new_val"][:150].strip()
-        page = get_object_or_404(Page.objects.only("admin_id", "description"), name=request.POST["name"])
-
-        if request.user.id == page.admin_id and page.description != new_description:
-            page.description = new_description
-            page.save(update_fields=["description"])
+        if request.POST.keys() >= {"name", "new_val"}:
+            new_description = request.POST["new_val"][:150].strip()
+            Page.objects.filter(admin=request.user, name=request.POST["name"]).update(description=new_description)
 
             return JsonResponse({"new_val": new_description})
 
-    return HttpResponseBadRequest()
+        return HttpResponseBadRequest()
+
+    raise Http404
 
 
 @api_view(["DELETE", "POST"])
