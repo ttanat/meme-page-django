@@ -433,7 +433,7 @@ def delete(request, model, identifier=None):
                 username = request.user.username
                 keys_to_delete = []
 
-                memes = request.user.memes.all()
+                memes = Meme.all_objects.only("original", "large", "thumbnail").filter(user=request.user)
                 # Move media files to path without a username
                 for meme in memes:
                     # Remove username and user image
@@ -456,7 +456,7 @@ def delete(request, model, identifier=None):
                 # Bulk update all memes
                 Meme.objects.bulk_update(memes, ("username", "user_image", "original", "large", "thumbnail"))
 
-                comments = request.user.comments.all()
+                comments = Comment.objects.only("image").filter(user=request.user)
                 for comment in comments:
                     # Remove username and user image
                     comment.username = comment.user_image.name = ""
