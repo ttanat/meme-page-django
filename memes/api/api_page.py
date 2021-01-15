@@ -88,7 +88,7 @@ def subscribe(request, name):
 
 
 class HandleSubscribeRequest(APIView):
-    """ Handle subscribe requests for private pages """
+    """ Handle subscribe requests for private pages for admin and moderators """
     permission_classes = [IsAuthenticated]
 
     def get_page(self, user, name):
@@ -148,7 +148,7 @@ class HandleSubscribeRequest(APIView):
         return HttpResponse(status=204)
 
 
-class HandleInviteLinkAdmin(APIView):
+class HandleInviteLinkMods(APIView):
     """ Handle invite links for private pages for admin AND moderators """
     permission_classes = [IsAuthenticated]
 

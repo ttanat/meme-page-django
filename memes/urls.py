@@ -38,7 +38,7 @@ urlpatterns = [
     path("subscribe/<str:name>", api_page.subscribe, name="subscribe"),
     path("subscribe_request/<str:name>", api_page.HandleSubscribeRequest.as_view(), name="subscribe_request"),
     # Invite links for private pages
-    path("invite/admin/<str:identifier>", api_page.HandleInviteLinkAdmin.as_view(), name="admin_invite"),
+    path("invite/for-mods/<str:identifier>", api_page.HandleInviteLinkMods.as_view(), name="admin_invite"),
     path("invite/<str:uuid>", api_page.HandleInviteLinkUser.as_view(), name="invite"),
     # Create new page
     path("new_page", api_page.new_page, name="new_page"),
