@@ -48,7 +48,7 @@ def user_session(request):
             "num_followers": profile["num_followers"],
             "num_following": profile["num_following"]
         },
-        "moderating": Page.objects.filter(Q(admin=user)|Q(moderators=user)).annotate(dname=F("display_name")).values("name", "dname", "private"),
+        "moderating": Page.objects.filter(moderators=user).annotate(dname=F("display_name")).values("name", "dname", "private"),
         "subscriptions": user.subscriptions.annotate(dname=F("display_name")).values("name", "dname", "private", "permissions")
     })
 

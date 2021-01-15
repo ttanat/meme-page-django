@@ -92,11 +92,11 @@ class HandleSubscribeRequest(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_page(self, user, name):
-        return get_object_or_404(Page.objects.only("id"), Q(admin=user)|Q(moderators=user), name=name)
+        return get_object_or_404(Page.objects.only("id"), moderators=user, name=name)
 
     def get(self, request, name):
         """ ID of request is sent too """
-        page = get_object_or_404(Page.objects.only("admin_id"), Q(admin=request.user)|Q(moderators=request.user), name=name)
+        page = get_object_or_404(Page.objects.only("admin_id"), moderators=request.user, name=name)
 
         reqs = SubscribeRequest.objects.annotate(username=F("user__username")) \
                                        .filter(page=page) \
@@ -153,7 +153,7 @@ class HandleInviteLinkAdmin(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_page(self, user, identifier):
-        return get_object_or_404(Page.objects.only("id"), Q(admin=user)|Q(moderators=user), name=identifier, private=True)
+        return get_object_or_404(Page.objects.only("id"), moderators=user, name=identifier, private=True)
 
     def post(self, request, identifier):
         """ identifier is name of page to create link for """
@@ -177,7 +177,7 @@ class HandleInviteLinkAdmin(APIView):
 
     def delete(self, request, identifier):
         """ identifier is uuid of link to delete """
-        InviteLink.objects.filter(uuid=identifier).filter(Q(page__admin=request.user)|Q(page__moderators=request.user)).delete()
+        InviteLink.objects.filter(uuid=identifier).filter(page__moderators=request.user).delete()
 
         return HttpResponse(status=204)
 
