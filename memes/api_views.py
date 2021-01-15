@@ -155,10 +155,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
 
 class PageMemeViewSet(MemeViewSet):
     def get_queryset(self):
-        if "name" not in self.request.query_params:
-            raise ParseError
-
-        pname = self.request.query_params["name"]
+        pname = self.request.query_params.get("name", "")
         if not re.search("^[a-zA-Z0-9_]{1,32}$", pname):
             raise NotFound
 
@@ -171,10 +168,11 @@ class PrivatePageMemeViewSet(MemeViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if "name" not in self.request.query_params:
-            raise ParseError
+        pname = self.request.query_params.get("name", "")
+        if not re.search("^[a-zA-Z0-9_]{1,32}$", pname):
+            raise NotFound
 
-        page = get_object_or_404(Page.objects.only("admin"), name=self.request.query_params["name"], private=True)
+        page = get_object_or_404(Page.objects.only("admin"), name=pname, private=True)
 
         if (page.admin_id != self.request.user.id
                 and not page.subscribers.filter(id=self.request.user.id).exists()
