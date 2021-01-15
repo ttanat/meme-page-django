@@ -115,7 +115,7 @@ def meme_view(request, uuid):
 
 
 @api_view(["GET"])
-def full_res(request, obj, uuid):
+def download_view(request, obj, uuid):
     if obj == "m":
         meme = get_object_or_404(Meme.objects.only("original", "large"), uuid=uuid)
         # Get original file if large is webp or original is GIF

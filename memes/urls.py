@@ -12,7 +12,7 @@ urlpatterns = [
     # path("logout", api_auth.logout_view, name="logout"),
 
     path("m/<str:uuid>", views.meme_view, name="meme_view"),
-    path("full_res/<str:obj>/<str:uuid>", views.full_res, name="full_res"),
+    path("download/<str:obj>/<str:uuid>", views.download_view, name="download_view"),
 
     path("like", views.like, name="like"),
     path("comment/<str:action>", views.comment, name="comment"),
