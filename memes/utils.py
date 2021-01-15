@@ -29,70 +29,65 @@ def resize_any_image(file_key: str, dimensions: tuple):
     )
 
 
-def check_upload_file_size(fname: str, size: int) -> bool:
-    # Get file extension
-    ext = os.path.splitext(fname)[1].lower()
-    # Check file sizes for images or videos
+def check_upload_file_metadata(name: str, size: int, content_type: str) -> dict:
+    """ Check file name, extension, content_type, and size """
+
+    # Check file name and extension exists + get extension in lowercase
+    tmp, ext = os.path.splitext(name.lower())
+    if not tmp or not ext:
+        return {"success": False, "message": "Invalid file name"}
+
+    # Check content type
+    if content_type not in ("image/jpeg", "image/png", "image/gif", "video/mp4", "video/quicktime"):
+        return {"success": False, "message": "Invalid file type"}
+
+    # Check sizes and extensions
     if ext in (".jpg", ".png", ".jpeg", ".gif"):
-        return size <= 5242880
+        if size > 5242880:
+            return {"success": False, "message": "Maximum image file size is 5 MB"}
     elif ext in (".mp4", ".mov"):
-        return size <= 15728640
-
-    return False
-
-
-def check_gif_info(img: object) -> int:
-    """ Check GIF duration in milliseconds and number of frames """
-    total_duration = sum([frame.info["duration"] for frame in ImageSequence.Iterator(img)])
-
-    # Check duration is <= 30 seconds (30000 ms)
-    if total_duration > 30000:
-        return {"success": False, "message": "GIF must be 30 seconds or less"}
-    # Check framerate is <= 60
-    if img.n_frames / (total_duration / 1000) > 60:
-        return {"success": False, "message": "Maximum 60 frames per second"}
+        if size > 15728640:
+            return {"success": False, "message": "Maximum video file size is 15 MB"}
+    else:
+        return {"success": False, "message": "Unsupported file type"}
 
     return {"success": True}
 
 
-def check_upload_file_valid(file: object) -> dict:
-    # Check file name and get extension in lowercase
-    tmp, ext = os.path.splitext(file.name.lower())
-    if not tmp or not ext:
-        return {"success": False, "message": "Invalid file name"}
+def check_upload_image_file(file: object) -> dict:
+    """ Check image file """
+    with Image.open(file) as img:
+        # Check aspect ratio for both image and GIF (Allow some extra room past 16:9 aspect ratio, e.g. for 720x404)
+        if not 1 / 1.8 < img.width / img.height < 1.8:
+            return {"success": False, "message": "Aspect ratio must be between 16:9 and 9:16"}
 
-    # Check content type and file extension is valid
-    if (file.content_type not in ("image/jpeg", "image/png", "image/gif", "video/mp4", "video/quicktime")
-            or ext not in (".jpg", ".png", ".jpeg", ".mp4", ".mov", ".gif")):
-        return {"success": False, "message": "Unsupported file type"}
+        if os.path.splitext(file.name)[1].lower() == ".gif":
+            # Check GIF dimensions are at least 250x250
+            if img.width < 250 or img.height < 250:
+                return {"success": False, "message": "GIF must be at least 250x250 pixels"}
+            # Get GIF duration and number of frames
+            return check_gif_info(img) # Final check for GIF so returning here
+        else:
+            # Check image dimensions are at least 320x320 pixels
+            if img.width < 320 or img.height < 320:
+                return {"success": False, "message": "Image must be at least 320x320 pixels"}
 
-    if ext in (".jpg", ".png", ".jpeg", ".gif"):
-        # Check file size for images
-        if file.size > 5242880:
-            return {"success": False, "message": "Maximum image file size is 5 MB"}
+    return {"success": True}
 
-        with Image.open(file) as img:
-            # Check aspect ratio for both image and GIF (Allow some extra room past 16:9 aspect ratio, e.g. for 720x404)
-            if not 1 / 1.8 < img.width / img.height < 1.8:
-                return {"success": False, "message": "Aspect ratio must be between 16:9 and 9:16"}
 
-            if ext == ".gif":
-                # Check GIF dimensions are at least 250x250
-                if img.width < 250 or img.height < 250:
-                    return {"success": False, "message": "GIF must be at least 250x250 pixels"}
-                # Get GIF duration and number of frames
-                return check_gif_info(img) # Final check for GIF so returning here
-            else:
-                # Check image dimensions are at least 320x320 pixels
-                if img.width < 320 or img.height < 320:
-                    return {"success": False, "message": "Image must be at least 320x320 pixels"}
+def check_gif_info(img: object) -> dict:
+    """ Check GIF duration and framerate """
+    try:
+        duration = sum([frame.info["duration"] for frame in ImageSequence.Iterator(img)])
+    except:
+        return {"success": False, "message": "Unexpected error occurred: Could not read GIF file"}
 
-    elif ext in (".mp4", ".mov"):
-        if file.size > 15728640:
-            return {"success": False, "message": "Maximum video file size is 15 MB"}
-
-    else:
-        return {"success": False, "message": "Invalid file type"}
+    # Check duration is <= 30 seconds (30000 ms)
+    if duration > 30000:
+        return {"success": False, "message": "GIF must be 30 seconds or less"}
+    # Check framerate is <= 60
+    if img.n_frames / (duration / 1000) > 60:
+        return {"success": False, "message": "Maximum 60 frames per second"}
 
     return {"success": True}
 
