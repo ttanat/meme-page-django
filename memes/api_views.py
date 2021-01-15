@@ -16,6 +16,20 @@ import re
 from urllib.parse import urlencode
 
 
+MEME_FIELDS = (
+    "username",
+    "user_image",
+    "page_name",
+    "original",
+    "large",
+    "upload_date",
+    "uuid",
+    "caption",
+    "points",
+    "num_comments"
+)
+
+
 def join_votes_with_data(data: list, user_id: int, object_name: str) -> list:
     """
     Get likes/dislikes for memes or comments in data then add to data
@@ -79,19 +93,16 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MemeSerializer
     pagination_class = MemePagination
 
+    def get_before(self, memes):
+        """ Get memes before certain datetime """
+        if "before" in self.request.query_params:
+            return memes.filter(upload_date__lte=parse_datetime(self.request.query_params["before"]))
+
+        # Don't get memes uploaded within past minute (allow time for files to get resized)
+        return memes.filter(upload_date__lt=timezone.now()-timedelta(minutes=1))
+
     def get_queryset(self):
-        memes = Meme.objects.only(
-            "username",
-            "user_image",
-            "page_name",
-            "original",
-            "large",
-            "upload_date",
-            "uuid",
-            "caption",
-            "points",
-            "num_comments"
-        ).filter(private=False)
+        memes = Meme.objects.only(*MEME_FIELDS).filter(private=False)
 
         # if (not self.request.user.is_authenticated or
         #         (self.request.user.is_authenticated and not self.request.user.show_nsfw)):
@@ -100,11 +111,7 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         pathname = self.request.query_params.get("p", "")
 
         # Get memes before certain datetime
-        if "before" in self.request.query_params:
-            memes = memes.filter(upload_date__lte=parse_datetime(self.request.query_params["before"]))
-        else:
-            # Don't get memes uploaded within past minute
-            memes = memes.filter(upload_date__lt=timezone.now()-timedelta(minutes=1))
+        memes = self.get_before(memes)
 
         # Don't show memes from private pages
         if pathname != "feed":
@@ -126,16 +133,6 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         elif pathname == "all":
             return memes
 
-        elif pathname.startswith("p/"):
-            pname = pathname.partition("p/")[2]
-
-            if not re.search("^[a-zA-Z0-9_]{1,32}$", pname):
-                raise NotFound
-
-            page = get_object_or_404(Page.objects.only("id"), name=pname)
-
-            return memes.filter(page=page)
-
         elif pathname.startswith("browse/"):
             category_name = pathname.partition("browse/")[2]
 
@@ -156,23 +153,35 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         raise NotFound
 
 
-class PrivatePageMemeViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = MemeSerializer
-    pagination_class = MemePagination
+class PageMemeViewSet(MemeViewSet):
+    def get_queryset(self):
+        if "name" not in self.request.query_params:
+            raise ParseError
+
+        pname = self.request.query_params["name"]
+        if not re.search("^[a-zA-Z0-9_]{1,32}$", pname):
+            raise NotFound
+
+        page = get_object_or_404(Page.objects.only("id"), name=pname, private=False)
+
+        return self.get_before(Meme.objects.only(*MEME_FIELDS).filter(page=page))
+
+
+class PrivatePageMemeViewSet(MemeViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         if "name" not in self.request.query_params:
             raise ParseError
 
-        page = get_object_or_404(Page.objects.only("admin"), name=self.request.query_params["name"])
+        page = get_object_or_404(Page.objects.only("admin"), name=self.request.query_params["name"], private=True)
 
         if (page.admin_id != self.request.user.id
                 and not page.subscribers.filter(id=self.request.user.id).exists()
                     and not page.moderators.filter(id=self.request.user.id).exists()):
             raise PermissionDenied
 
-        return Meme.objects.filter(page=page)
+        return self.get_before(Meme.objects.only(*MEME_FIELDS).filter(page=page))
 
 
 class CommentPagination(pagination.PageNumberPagination):
