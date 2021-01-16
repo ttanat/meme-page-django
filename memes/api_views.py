@@ -16,20 +16,6 @@ import re
 from urllib.parse import urlencode
 
 
-MEME_FIELDS = (
-    "username",
-    "user_image",
-    "page_name",
-    "original",
-    "large",
-    "upload_date",
-    "uuid",
-    "caption",
-    "points",
-    "num_comments"
-)
-
-
 def join_votes_with_data(data: list, user_id: int, object_name: str) -> list:
     """
     Get likes/dislikes for memes or comments in data then add to data
@@ -95,17 +81,31 @@ class MemeViewSet(viewsets.ReadOnlyModelViewSet):
         # Don't get memes uploaded within past minute (allow time for files to get resized)
         return memes.filter(upload_date__lt=timezone.now()-timedelta(minutes=1))
 
+    def get_meme_queryset(self, before=True):
+        """ Select correct fields and filter memes before certain datetime """
+        memes = Meme.objects.only(
+            "username",
+            "user_image",
+            "page_name",
+            "original",
+            "large",
+            "upload_date",
+            "uuid",
+            "caption",
+            "points",
+            "num_comments"
+        )
+
+        return self.get_before(memes) if before else memes
+
     def get_queryset(self):
-        memes = Meme.objects.only(*MEME_FIELDS).filter(private=False)
+        memes = self.get_meme_queryset().filter(private=False)
 
         # if (not self.request.user.is_authenticated or
         #         (self.request.user.is_authenticated and not self.request.user.show_nsfw)):
         #     memes = memes.filter(nsfw=False)
 
         pathname = self.request.query_params.get("p", "")
-
-        # Get memes before certain datetime
-        memes = self.get_before(memes)
 
         # Don't show memes from private pages
         if pathname != "feed":
@@ -158,7 +158,7 @@ class PageMemeViewSet(MemeViewSet):
     def get_queryset(self):
         page = get_object_or_404(Page.objects.only("id"), name=self.get_page_name(), private=False)
 
-        return self.get_before(Meme.objects.only(*MEME_FIELDS).filter(page=page))
+        return self.get_meme_queryset().filter(page=page)
 
 
 class PrivatePageMemeViewSet(PageMemeViewSet):
@@ -172,7 +172,7 @@ class PrivatePageMemeViewSet(PageMemeViewSet):
                     and not page.moderators.filter(id=self.request.user.id).exists()):
             raise PermissionDenied
 
-        return self.get_before(Meme.objects.only(*MEME_FIELDS).filter(page=page))
+        return self.get_meme_queryset().filter(page=page)
 
 
 class CommentPagination(pagination.PageNumberPagination):
