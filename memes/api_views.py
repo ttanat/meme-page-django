@@ -34,25 +34,19 @@ def join_votes_with_data(data: list, user_id: int, object_name: str) -> list:
     """
     Get likes/dislikes for memes or comments in data then add to data
     """
-
-    # Check if getting votes for meme or comment
-    if object_name == "meme":
-        ObjectLike = MemeLike
-        uid_field = "meme_uuid"
-    elif object_name == "comment":
-        ObjectLike = CommentLike
-        uid_field = "comment_uuid"
-    else:
-        return data
+    assert object_name in ("meme", "comment")
 
     # Get meme or comment uids from data
     uids = [obj["uuid"] for obj in data]
     # Get votes for those memes/comments for that user
-    votes = ObjectLike.objects.filter(user_id=user_id, **{f"{uid_field}__in": uids}).values(uid_field, "point")
+    if object_name == "meme":
+        votes = MemeLike.objects.filter(user_id=user_id, meme_uuid__in=uids).values("meme_uuid", "point")
+    else:
+        votes = CommentLike.objects.filter(user_id=user_id, comment_uuid__in=uids).values("comment_uuid", "point")
     # Add "vote" key and point (1 or -1) value to meme/comment in data
     for vote in votes:
         for obj in data:
-            if vote[uid_field] == obj["uuid"]:
+            if vote[f"{object_name}_uuid"] == obj["uuid"]:
                 obj["vote"] = vote["point"]
                 break
 
