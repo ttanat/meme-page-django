@@ -288,7 +288,8 @@ class SearchUserViewSet(viewsets.ReadOnlyModelViewSet):
 
 class SearchPageViewSet(viewsets.ReadOnlyModelViewSet):
     model = Page
-    queryset = Page.objects.order_by("-num_subscribers").distinct()
+    queryset = Page.objects.only("name", "display_name", "image", "description", "num_subscribers") \
+                           .order_by("-num_subscribers")
     serializer_class = SearchPageSerializer
     pagination_class = SearchListPagination
     filter_backends = [filters.SearchFilter]
