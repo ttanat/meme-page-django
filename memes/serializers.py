@@ -120,11 +120,11 @@ class ReplySerializer(serializers.ModelSerializer):
 class SearchUserSerializer(serializers.ModelSerializer):
     dp_url = serializers.SerializerMethodField()
     bio = serializers.SerializerMethodField()
-    num_memes = serializers.SerializerMethodField()
+    clout = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("username", "dp_url", "bio", "num_memes")
+        fields = ("username", "dp_url", "bio", "clout")
 
     def get_dp_url(self, obj):
         try:
@@ -135,8 +135,8 @@ class SearchUserSerializer(serializers.ModelSerializer):
     def get_bio(self, obj):
         return obj.profile.bio
 
-    def get_num_memes(self, obj):
-        return obj.profile.num_memes
+    def get_clout(self, obj):
+        return obj.profile.clout
 
 
 class SearchPageSerializer(serializers.ModelSerializer):

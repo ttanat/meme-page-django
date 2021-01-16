@@ -278,8 +278,8 @@ class SearchListPagination(pagination.PageNumberPagination):
 class SearchUserViewSet(viewsets.ReadOnlyModelViewSet):
     model = User
     queryset = User.objects.select_related("profile") \
-                           .only("username", "image", "profile__bio", "profile__num_memes") \
-                           .order_by("-profile__num_memes")
+                           .only("username", "image", "profile__bio", "profile__clout") \
+                           .order_by("-profile__clout")
     serializer_class = SearchUserSerializer
     pagination_class = SearchListPagination
     filter_backends = [filters.SearchFilter]
