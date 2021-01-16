@@ -118,15 +118,15 @@ class ReplySerializer(serializers.ModelSerializer):
 
 
 class SearchUserSerializer(serializers.ModelSerializer):
-    dp_url = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     bio = serializers.SerializerMethodField()
     clout = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("username", "dp_url", "bio", "clout")
+        fields = ("username", "image", "bio", "clout")
 
-    def get_dp_url(self, obj):
+    def get_image(self, obj):
         try:
             return obj.image.url
         except ValueError:
@@ -140,14 +140,14 @@ class SearchUserSerializer(serializers.ModelSerializer):
 
 
 class SearchPageSerializer(serializers.ModelSerializer):
-    dp_url = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     num_subscribers = serializers.IntegerField()
 
     class Meta:
         model = Page
-        fields = ("name", "display_name", "dp_url", "description", "num_subscribers")
+        fields = ("name", "display_name", "image", "description", "num_subscribers")
 
-    def get_dp_url(self, obj):
+    def get_image(self, obj):
         try:
             return obj.image.url
         except ValueError:
